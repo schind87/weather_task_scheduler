@@ -1,6 +1,6 @@
 import requests
 
-OPENWEATHER_API_KEY = "YOUR_OPENWEATHERMAP_API_KEY"
+OPENWEATHER_API_KEY = "28c994ffe7bf1c4f8975ec9e222e3589"
 
 def fetch_hourly_forecast(location):
     """
