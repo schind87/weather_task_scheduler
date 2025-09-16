@@ -68,7 +68,12 @@ def get_suggestions(request: schemas.SuggestionRequest, db: Session = Depends(ge
     task = crud.get_task(db, request.task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    forecast = weather.fetch_hourly_forecast(task.location)
+    try:
+        forecast = weather.fetch_hourly_forecast(task.location)
+    except weather.WeatherServiceError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     window_result = find_windows.find_windows(
         forecast=forecast,
         min_temp=task.min_temp,

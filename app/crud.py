@@ -14,6 +14,8 @@ def create_task(db: Session, task: schemas.TaskCreate):
     # Fetch forecast and find scheduling window
     try:
         forecast = weather.fetch_hourly_forecast(task.location)
+    except weather.WeatherServiceError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     window_result = find_windows.find_windows(
@@ -69,6 +71,8 @@ def update_task(db: Session, task_id: int, task_update: schemas.TaskCreate):
         setattr(task, field, value)
     try:
         forecast = weather.fetch_hourly_forecast(task.location)
+    except weather.WeatherServiceError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     window_result = find_windows.find_windows(
