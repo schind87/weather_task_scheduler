@@ -295,14 +295,28 @@ document.addEventListener('DOMContentLoaded', () => {
                         .map((window) => `${window.display} (${window.duration})`)
                         .join('<br>');
                 } else {
-                    let message = data.no_windows_reason || 'No available windows found.';
+                    const fallbackMessage = data.no_windows_reason || 'No available windows found.';
+                    const blockersIndex = fallbackMessage.indexOf('Common blockers:');
+                    const visibleMessage = blockersIndex !== -1
+                        ? fallbackMessage.slice(0, blockersIndex).trim()
+                        : fallbackMessage;
+                    const hiddenIntro = blockersIndex !== -1
+                        ? fallbackMessage.slice(blockersIndex).trim()
+                        : '';
+
                     if (data.reason_details && data.reason_details.length > 0) {
-                        const detailLines = data.reason_details
-                            .map((detail) => `- ${detail.reason} (${detail.count})`)
-                            .join('<br>');
-                        message += `<br>${detailLines}`;
+                        const listItems = data.reason_details
+                            .map((detail) => `<li>${detail.reason} (${detail.count})</li>`)
+                            .join('');
+                        const introHtml = hiddenIntro ? `<p>${hiddenIntro}</p>` : '';
+                        windowsDiv.innerHTML = `<div>${visibleMessage}</div>` +
+                            `<details class="mt-1 text-sm">` +
+                            `<summary class="cursor-pointer text-blue-600">Show details</summary>` +
+                            `<div class="mt-1">${introHtml}<ul class="list-disc pl-5">${listItems}</ul></div>` +
+                            `</details>`;
+                    } else {
+                        windowsDiv.textContent = fallbackMessage;
                     }
-                    windowsDiv.innerHTML = message;
                 }
             } else {
                 windowsDiv.textContent = 'Error fetching windows.';

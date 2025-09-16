@@ -1,5 +1,4 @@
 from collections import Counter
-from datetime import datetime
 import time
 from typing import Dict, List, Optional, Tuple
 
@@ -39,6 +38,7 @@ def _check_constraints(
     no_rain: bool,
     earliest: Optional[Tuple[int, int]],
     latest: Optional[Tuple[int, int]],
+    enforce_time: bool = True,
 ) -> Tuple[bool, Optional[str]]:
     temp = entry.get('temp')
     rain = entry.get('rain', 0) or 0
@@ -61,13 +61,13 @@ def _check_constraints(
             return False, f'humidity above maximum ({humidity}% > {max_humidity}%)'
     if no_rain and rain > 0:
         return False, 'rain expected during window'
-    if earliest or latest:
-        dt_utc = datetime.utcfromtimestamp(entry['dt'])
-        current_hour = (dt_utc.hour, dt_utc.minute)
+    if enforce_time and (earliest or latest):
+        dt_local = time.localtime(entry['dt'])
+        current_hour = (dt_local.tm_hour, dt_local.tm_min)
         if earliest and current_hour < earliest:
-            return False, f'start before earliest allowed ({dt_utc.strftime("%H:%M")})'
+            return False, f'start before earliest allowed ({dt_local.tm_hour:02d}:{dt_local.tm_min:02d})'
         if latest and current_hour > latest:
-            return False, f'start after latest allowed ({dt_utc.strftime("%H:%M")})'
+            return False, f'start after latest allowed ({dt_local.tm_hour:02d}:{dt_local.tm_min:02d})'
     return True, None
 
 
@@ -107,34 +107,40 @@ def find_windows(
     i = 0
     n = len(forecast)
     while i < n:
-        entry = forecast[i]
-        valid, reason = _check_constraints(entry, min_temp, max_temp, min_humidity, max_humidity, no_rain, earliest, latest)
-        if not valid:
-            if reason:
-                failures[reason] += 1
-            i += 1
-            continue
         start_idx = i
-        start_dt = entry['dt']
-        last_dt = start_dt
         total_hours = 0
         j = i
+        last_dt = forecast[start_idx]['dt']
+        window_failed = False
         while j < n:
             block = forecast[j]
             if j > start_idx and block['dt'] - last_dt != block_hours * 3600:
                 failures['forecast data gaps prevent continuous window'] += 1
+                window_failed = True
                 break
-            block_valid, block_reason = _check_constraints(block, min_temp, max_temp, min_humidity, max_humidity, no_rain, earliest, latest)
+            enforce_time = j == start_idx
+            block_valid, block_reason = _check_constraints(
+                block,
+                min_temp,
+                max_temp,
+                min_humidity,
+                max_humidity,
+                no_rain,
+                earliest if enforce_time else None,
+                latest if enforce_time else None,
+                enforce_time=enforce_time,
+            )
             if not block_valid:
                 if block_reason:
                     failures[block_reason] += 1
+                window_failed = True
                 break
             total_hours += block_hours
             last_dt = block['dt']
             j += 1
         if total_hours < duration_hours and j >= n:
             failures['forecast horizon ended before reaching required duration'] += 1
-        if total_hours >= duration_hours:
+        if not window_failed and total_hours >= duration_hours:
             window_start = forecast[start_idx]['dt']
             window_end = last_dt + block_hours * 3600
             actual_hours = int((window_end - window_start) / 3600)
