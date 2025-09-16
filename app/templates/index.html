@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Task Scheduler</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">Weather Task Scheduler</h1>
+            <p class="text-gray-600">Schedule your tasks based on weather conditions</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Task Form -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 id="formTitle" class="text-xl font-semibold mb-4">Add New Task</h2>
+                <form id="taskForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Task Name</label>
+                        <input type="text" id="taskName" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">ZIP Code</label>
+                        <input type="text" id="location" required inputmode="numeric" placeholder="e.g., 01778" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Duration (hours)</label>
+                        <input type="number" id="durationHours" required min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+
+                    <!-- Temperature Range Section -->
+                    <div class="border rounded-md p-4 bg-gray-50">
+                        <div class="flex items-center mb-2">
+                            <input type="checkbox" id="useTemperature" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            <label for="useTemperature" class="ml-2 block text-sm font-medium text-gray-700">
+                                Use Temperature Range
+                            </label>
+                        </div>
+                        <div id="temperatureInputs" class="space-y-2 opacity-50 pointer-events-none">
+                            <div class="flex space-x-2">
+                                <div class="flex-1">
+                                    <label class="block text-sm text-gray-600">Min Temperature (&deg;F)</label>
+                                    <input type="number" id="minTemp" placeholder="Min" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                </div>
+                                <div class="flex-1">
+                                    <label class="block text-sm text-gray-600">Max Temperature (&deg;F)</label>
+                                    <input type="number" id="maxTemp" placeholder="Max" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Humidity Range Section -->
+                    <div class="border rounded-md p-4 bg-gray-50">
+                        <div class="flex items-center mb-2">
+                            <input type="checkbox" id="useHumidity" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            <label for="useHumidity" class="ml-2 block text-sm font-medium text-gray-700">
+                                Use Humidity Range
+                            </label>
+                        </div>
+                        <div id="humidityInputs" class="space-y-2 opacity-50 pointer-events-none">
+                            <div class="flex space-x-2">
+                                <div class="flex-1">
+                                    <label class="block text-sm text-gray-600">Min Humidity (%)</label>
+                                    <input type="number" id="minHumidity" min="0" max="100" placeholder="Min" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                </div>
+                                <div class="flex-1">
+                                    <label class="block text-sm text-gray-600">Max Humidity (%)</label>
+                                    <input type="number" id="maxHumidity" min="0" max="100" placeholder="Max" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center">
+                        <input type="checkbox" id="noRain" checked class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="noRain" class="ml-2 block text-sm text-gray-700">
+                            No rain required
+                        </label>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Earliest Start Time</label>
+                        <input type="time" id="earliestStart" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Latest Start Time</label>
+                        <input type="time" id="latestStart" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div class="flex space-x-2">
+                        <button type="submit" id="submitButton" class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                            Add Task
+                        </button>
+                        <button type="button" id="cancelEditButton" class="hidden flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Task List -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Scheduled Tasks</h2>
+                <div id="taskList" class="space-y-4">
+                    <!-- Tasks will be dynamically added here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
