@@ -12,6 +12,58 @@ document.addEventListener('DOMContentLoaded', () => {
     let editingTaskId = null;
     const taskCache = new Map();
 
+    const renderWindowSummary = (windowsDiv, summary) => {
+        if (!windowsDiv) {
+            return;
+        }
+        if (!summary) {
+            windowsDiv.textContent = 'Summary unavailable.';
+            return;
+        }
+        const possibleWindows = Array.isArray(summary.possible_windows)
+            ? summary.possible_windows
+            : [];
+        const reasonSummary = summary.reason_summary || '';
+        const reasonDetails = Array.isArray(summary.reason_details)
+            ? summary.reason_details
+            : [];
+
+        if (possibleWindows.length > 0) {
+            windowsDiv.innerHTML = '<b>Possible Windows:</b><br>' + possibleWindows
+                .map((window) => `${window.display} (${window.duration})`)
+                .join('<br>');
+            return;
+        }
+
+        const fallbackMessage = reasonSummary || 'No available windows found.';
+        const blockersIndex = fallbackMessage.indexOf('Common blockers:');
+        const visibleMessage = blockersIndex !== -1
+            ? fallbackMessage.slice(0, blockersIndex).trim()
+            : fallbackMessage;
+        const hiddenIntro = blockersIndex !== -1
+            ? fallbackMessage.slice(blockersIndex).trim()
+            : '';
+
+        if (reasonDetails.length > 0) {
+            const listItems = reasonDetails
+                .map((detail) => `<li>${detail.reason} (${detail.count})</li>`)
+                .join('');
+            const introHtml = hiddenIntro ? `<p>${hiddenIntro}</p>` : '';
+            windowsDiv.innerHTML = `<div>${visibleMessage}</div>` +
+                `<details class="mt-1 text-sm">` +
+                `<summary class="cursor-pointer text-blue-600">Show details</summary>` +
+                `<div class="mt-1">${introHtml}<ul class="list-disc pl-5">${listItems}</ul></div>` +
+                `</details>`;
+        } else {
+            windowsDiv.textContent = fallbackMessage;
+        }
+    };
+
+    const updateTaskSummaryDisplay = (taskId, summary) => {
+        const windowsDiv = document.getElementById(`windows-${taskId}`);
+        renderWindowSummary(windowsDiv, summary);
+    };
+
     const toggleGroupState = (checkbox, group) => {
         group.classList.toggle('opacity-50', !checkbox.checked);
         group.classList.toggle('pointer-events-none', !checkbox.checked);
@@ -220,12 +272,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(payload),
             });
 
+            let data = null;
+            try {
+                data = await response.json();
+            } catch (parseError) {
+                data = null;
+            }
+
             if (response.ok) {
                 resetForm();
                 await loadTasks();
+                if (data?.task?.id) {
+                    updateTaskSummaryDisplay(data.task.id, data);
+                }
             } else {
-                const error = await response.json();
-                alert(`Error saving task: ${error.detail || 'Unknown error'}`);
+                const errorMessage = data?.detail || 'Unknown error';
+                alert(`Error saving task: ${errorMessage}`);
             }
         } catch (err) {
             alert('Network or server error while saving task.');
@@ -289,35 +351,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ task_id: taskId }),
             });
             if (response.ok) {
-                const data = await response.json();
-                if (data.possible_windows && data.possible_windows.length > 0) {
-                    windowsDiv.innerHTML = '<b>Possible Windows:</b><br>' + data.possible_windows
-                        .map((window) => `${window.display} (${window.duration})`)
-                        .join('<br>');
-                } else {
-                    const fallbackMessage = data.no_windows_reason || 'No available windows found.';
-                    const blockersIndex = fallbackMessage.indexOf('Common blockers:');
-                    const visibleMessage = blockersIndex !== -1
-                        ? fallbackMessage.slice(0, blockersIndex).trim()
-                        : fallbackMessage;
-                    const hiddenIntro = blockersIndex !== -1
-                        ? fallbackMessage.slice(blockersIndex).trim()
-                        : '';
-
-                    if (data.reason_details && data.reason_details.length > 0) {
-                        const listItems = data.reason_details
-                            .map((detail) => `<li>${detail.reason} (${detail.count})</li>`)
-                            .join('');
-                        const introHtml = hiddenIntro ? `<p>${hiddenIntro}</p>` : '';
-                        windowsDiv.innerHTML = `<div>${visibleMessage}</div>` +
-                            `<details class="mt-1 text-sm">` +
-                            `<summary class="cursor-pointer text-blue-600">Show details</summary>` +
-                            `<div class="mt-1">${introHtml}<ul class="list-disc pl-5">${listItems}</ul></div>` +
-                            `</details>`;
-                    } else {
-                        windowsDiv.textContent = fallbackMessage;
-                    }
+                let data = null;
+                try {
+                    data = await response.json();
+                } catch (parseError) {
+                    data = null;
                 }
+                renderWindowSummary(windowsDiv, data);
             } else {
                 windowsDiv.textContent = 'Error fetching windows.';
             }

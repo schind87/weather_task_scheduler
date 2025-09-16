@@ -1,8 +1,20 @@
-from sqlalchemy.orm import Session
-from . import models, schemas
 from datetime import datetime
-from . import weather, find_windows
+from typing import Any, Dict
+
 from fastapi import HTTPException
+from sqlalchemy.orm import Session
+
+from . import find_windows, models, schemas, weather
+
+
+def _build_task_response(task: models.Task, window_result: Dict[str, Any]) -> Dict[str, Any]:
+    """Construct the response payload for task mutations."""
+    return {
+        "task": task,
+        "possible_windows": window_result.get("windows", []),
+        "reason_summary": window_result.get("reason_summary"),
+        "reason_details": window_result.get("reason_details", []),
+    }
 
 def get_task(db: Session, task_id: int):
     return db.query(models.Task).filter(models.Task.id == task_id).first()
@@ -49,7 +61,7 @@ def create_task(db: Session, task: schemas.TaskCreate):
     db.add(db_task)
     db.commit()
     db.refresh(db_task)
-    return db_task
+    return _build_task_response(db_task, window_result)
 
 def delete_task(db: Session, task_id: int):
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
@@ -86,4 +98,4 @@ def update_task(db: Session, task_id: int, task_update: schemas.TaskCreate):
     task.scheduled_time = datetime.utcfromtimestamp(windows[0]['start_ts']) if windows else None
     db.commit()
     db.refresh(task)
-    return task
+    return _build_task_response(task, window_result)

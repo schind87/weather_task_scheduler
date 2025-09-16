@@ -35,7 +35,7 @@ templates = Jinja2Templates(directory="app/templates")
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-@app.post("/tasks/", response_model=schemas.Task)
+@app.post("/tasks/", response_model=schemas.TaskMutationResponse)
 def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)):
     return crud.create_task(db, task)
 
@@ -50,7 +50,7 @@ def read_task(task_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Task not found")
     return task
 
-@app.put("/tasks/{task_id}", response_model=schemas.Task)
+@app.put("/tasks/{task_id}", response_model=schemas.TaskMutationResponse)
 def update_task(task_id: int, task: schemas.TaskCreate, db: Session = Depends(get_db)):
     updated = crud.update_task(db, task_id, task)
     if not updated:
@@ -82,6 +82,6 @@ def get_suggestions(request: schemas.SuggestionRequest, db: Session = Depends(ge
     )
     return {
         "possible_windows": window_result["windows"],
-        "no_windows_reason": window_result.get("reason_summary"),
+        "reason_summary": window_result.get("reason_summary"),
         "reason_details": window_result.get("reason_details", []),
     }

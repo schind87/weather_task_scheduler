@@ -55,7 +55,15 @@ class ReasonDetail(BaseModel):
     count: int
 
 
-class SuggestionResponse(BaseModel):
+class WindowSummary(BaseModel):
     possible_windows: List[WindowResult]
-    no_windows_reason: Optional[str] = None
+    reason_summary: Optional[str] = None
     reason_details: List[ReasonDetail] = Field(default_factory=list)
+
+
+class SuggestionResponse(WindowSummary):
+    pass
+
+
+class TaskMutationResponse(WindowSummary):
+    task: Task
