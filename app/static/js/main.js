@@ -91,6 +91,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    const isValidZipInput = (value) => {
+        if (typeof value !== 'string') {
+            return false;
+        }
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return false;
+        }
+        const [basePart, countryPart = ''] = trimmed
+            .split(',', 2)
+            .map((part) => part.trim());
+        const digits = basePart.replace(/\D/g, '');
+        if (digits.length !== 5 && digits.length !== 9) {
+            return false;
+        }
+        if (countryPart) {
+            return /^[A-Za-z]{2}$/.test(countryPart);
+        }
+        return true;
+    };
+
     const setFieldError = (fieldId, message) => {
         const errorElement = fieldErrorElements[fieldId];
         if (errorElement) {
@@ -151,9 +172,12 @@ document.addEventListener('DOMContentLoaded', () => {
             flagError('taskName', 'Task name is required.');
         }
 
-        const locationValue = document.getElementById('location').value.trim();
-        if (!/^[0-9]{5}$/.test(locationValue)) {
-            flagError('location', 'Please enter a valid 5-digit ZIP code.');
+        const locationValue = document.getElementById('location').value;
+        if (!isValidZipInput(locationValue)) {
+            flagError(
+                'location',
+                'Please enter a valid ZIP (5 digits, 9 digits with optional hyphen, optional ",CC" suffix).',
+            );
         }
 
         const durationInput = document.getElementById('durationHours');
