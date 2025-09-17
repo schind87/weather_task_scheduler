@@ -172,11 +172,12 @@ document.addEventListener('DOMContentLoaded', () => {
             flagError('taskName', 'Task name is required.');
         }
 
-        const locationValue = document.getElementById('location').value;
-        if (!isValidZipInput(locationValue)) {
+        const locationValue = document.getElementById('location').value.trim();
+        const zipPattern = /^\d{5}(?:[-\s]?\d{4})?(?:\s*,\s*[A-Za-z]{2})?$/i;
+        if (!zipPattern.test(locationValue)) {
             flagError(
                 'location',
-                'Please enter a valid ZIP (5 digits, 9 digits with optional hyphen, optional ",CC" suffix).',
+                'Please enter a valid ZIP code (5 digits, ZIP+4, or add a country like 12345,CA).',
             );
         }
 
