@@ -80,6 +80,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const taskCache = new Map();
     const summaryCache = new Map();
 
+    const fieldErrorElements = Object.freeze({
+        taskName: document.getElementById('taskNameError'),
+        location: document.getElementById('locationError'),
+        durationHours: document.getElementById('durationHoursError'),
+        minTemp: document.getElementById('minTempError'),
+        maxTemp: document.getElementById('maxTempError'),
+        minHumidity: document.getElementById('minHumidityError'),
+        maxHumidity: document.getElementById('maxHumidityError'),
+        earliestStart: document.getElementById('earliestStartError'),
+        latestStart: document.getElementById('latestStartError'),
+    });
+
     const normaliseSummary = (rawSummary) => {
         if (!rawSummary || typeof rawSummary !== 'object') {
             return null;
@@ -158,48 +170,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const windowsDiv = document.getElementById(`windows-${taskId}`);
         renderWindowSummary(windowsDiv, summary);
-    };
-
-    const notificationStyles = {
-        success: 'bg-green-50 border-green-200 text-green-800',
-        error: 'bg-red-50 border-red-200 text-red-800',
-        info: 'bg-blue-50 border-blue-200 text-blue-800',
-    };
-
-    const showNotification = (type, message) => {
-        if (!notificationContainer) {
-            return;
-        }
-        const style = notificationStyles[type] || notificationStyles.info;
-        const wrapper = document.createElement('div');
-        wrapper.className = `flex items-start justify-between rounded-md border px-4 py-3 shadow-sm transition-opacity duration-200 ${style}`;
-
-        const text = document.createElement('p');
-        text.className = 'pr-3 text-sm';
-        text.textContent = message;
-
-        const closeButton = document.createElement('button');
-        closeButton.type = 'button';
-        closeButton.className = 'ml-4 text-lg leading-none opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-current';
-        closeButton.setAttribute('aria-label', 'Dismiss notification');
-        closeButton.innerHTML = '&times;';
-        closeButton.addEventListener('click', () => wrapper.remove());
-
-        wrapper.appendChild(text);
-        wrapper.appendChild(closeButton);
-
-        if (notificationContainer.children.length >= 4) {
-            notificationContainer.removeChild(notificationContainer.firstElementChild);
-        }
-
-        notificationContainer.appendChild(wrapper);
-
-        window.setTimeout(() => {
-            wrapper.classList.add('opacity-0');
-            window.setTimeout(() => {
-                wrapper.remove();
-            }, 200);
-        }, 8000);
     };
 
     const clearSpecificFieldError = (fieldId) => {

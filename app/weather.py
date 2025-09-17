@@ -14,16 +14,15 @@ class WeatherServiceError(Exception):
         self.status_code = status_code
 
 
-def _load_api_key() -> str:
+def _get_api_key() -> str:
     key = os.environ.get("OPENWEATHER_API_KEY", "").strip()
     if not key:
-        raise RuntimeError(
-            "OPENWEATHER_API_KEY environment variable must be set to contact OpenWeather."
+        raise WeatherServiceError(
+            "OPENWEATHER_API_KEY environment variable must be set to contact OpenWeather.",
+            status_code=500,
         )
     return key
 
-
-OPENWEATHER_API_KEY = _load_api_key()
 
 
 def _normalize_zip(zip_code: str) -> str:
@@ -53,9 +52,10 @@ def fetch_hourly_forecast(zip_code: str) -> Tuple[List[Dict[str, float]], int]:
     timezone offset is expressed in seconds from UTC.
     """
     normalized = _normalize_zip(zip_code)
+    api_key = _get_api_key()
     url = (
         "https://api.openweathermap.org/data/2.5/forecast?"
-        f"zip={normalized}&appid={OPENWEATHER_API_KEY}&units=imperial"
+        f"zip={normalized}&appid={api_key}&units=imperial"
     )
     try:
         resp = requests.get(url, timeout=10)
