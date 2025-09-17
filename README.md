@@ -4,12 +4,20 @@ A FastAPI service to schedule tasks that require certain weather conditions (e.g
 - Add/view/edit/delete your tasks via `/tasks`
 - Get weather-based suggestions via `/suggestions`
 
-## Database initialization
+## Environment variables
 
-The SQLite database file is not tracked in source control. Create or refresh the schema before running the app by executing:
+Set the `OPENWEATHER_API_KEY` environment variable with your
+[OpenWeather](https://openweathermap.org/api) credential before starting the
+application or running tests.
 
 ```bash
-python scripts/init_db.py
+export OPENWEATHER_API_KEY="your-openweather-api-key"
+uvicorn app.main:app --reload
 ```
 
-The script (and the FastAPI application itself) uses the SQLAlchemy models to build `test.db` with all required columns so new environments provision the database automatically.
+### Deployment
+
+Ensure the deployment environment (systemd unit, container orchestrator, managed
+hosting, etc.) also provides `OPENWEATHER_API_KEY` so the service can authenticate
+against OpenWeather during startup.
+
