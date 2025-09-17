@@ -80,8 +80,8 @@ def get_suggestions(request: schemas.SuggestionRequest, db: Session = Depends(ge
         earliest_start=getattr(task, 'earliest_start', None),
         latest_start=getattr(task, 'latest_start', None)
     )
-    return {
-        "possible_windows": window_result["windows"],
-        "reason_summary": window_result.get("reason_summary"),
-        "reason_details": window_result.get("reason_details", []),
-    }
+    return schemas.SuggestionResponse(
+        possible_windows=window_result.get("windows", []),
+        reason_summary=window_result.get("reason_summary"),
+        reason_details=window_result.get("reason_details", []),
+    )

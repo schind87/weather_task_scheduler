@@ -11,6 +11,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let editingTaskId = null;
     const taskCache = new Map();
+    const summaryCache = new Map();
+
+    const normaliseSummary = (rawSummary) => {
+        if (!rawSummary || typeof rawSummary !== 'object') {
+            return null;
+        }
+        const hasPossibleWindows = Object.prototype.hasOwnProperty.call(rawSummary, 'possible_windows');
+        const possibleWindows = hasPossibleWindows && Array.isArray(rawSummary.possible_windows)
+            ? rawSummary.possible_windows.map((window) => ({ ...window }))
+            : [];
+        const hasReasonSummary = Object.prototype.hasOwnProperty.call(rawSummary, 'reason_summary');
+        const reasonSummary = hasReasonSummary ? rawSummary.reason_summary ?? null : null;
+        const hasReasonDetails = Object.prototype.hasOwnProperty.call(rawSummary, 'reason_details');
+        const reasonDetails = hasReasonDetails && Array.isArray(rawSummary.reason_details)
+            ? rawSummary.reason_details.map((detail) => ({ ...detail }))
+            : [];
+
+        if (!hasPossibleWindows && !hasReasonSummary && !hasReasonDetails) {
+            return null;
+        }
+
+        return {
+            possible_windows: possibleWindows,
+            reason_summary: reasonSummary,
+            reason_details: reasonDetails,
+        };
+    };
 
     const renderWindowSummary = (windowsDiv, summary) => {
         if (!windowsDiv) {
@@ -20,13 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
             windowsDiv.textContent = 'Summary unavailable.';
             return;
         }
-        const possibleWindows = Array.isArray(summary.possible_windows)
-            ? summary.possible_windows
-            : [];
+        const possibleWindows = summary.possible_windows;
         const reasonSummary = summary.reason_summary || '';
-        const reasonDetails = Array.isArray(summary.reason_details)
-            ? summary.reason_details
-            : [];
+        const reasonDetails = summary.reason_details;
 
         if (possibleWindows.length > 0) {
             windowsDiv.innerHTML = '<b>Possible Windows:</b><br>' + possibleWindows
@@ -59,7 +82,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const updateTaskSummaryDisplay = (taskId, summary) => {
+    const updateTaskSummaryDisplay = (taskId, rawSummary) => {
+        const summary = normaliseSummary(rawSummary);
+        if (summary) {
+            summaryCache.set(taskId, summary);
+        } else {
+            summaryCache.delete(taskId);
+        }
         const windowsDiv = document.getElementById(`windows-${taskId}`);
         renderWindowSummary(windowsDiv, summary);
     };
@@ -167,6 +196,11 @@ document.addEventListener('DOMContentLoaded', () => {
             tasks.forEach((task) => {
                 taskCache.set(task.id, task);
                 taskList.appendChild(createTaskElement(task));
+                const cachedSummary = summaryCache.get(task.id);
+                if (cachedSummary) {
+                    const windowsDiv = document.getElementById(`windows-${task.id}`);
+                    renderWindowSummary(windowsDiv, cachedSummary);
+                }
             });
         } catch (error) {
             console.error('Error loading tasks:', error);
@@ -283,6 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 resetForm();
                 await loadTasks();
                 if (data?.task?.id) {
+                    taskCache.set(data.task.id, data.task);
                     updateTaskSummaryDisplay(data.task.id, data);
                 }
             } else {
@@ -328,6 +363,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (editingTaskId === taskId) {
                     resetForm();
                 }
+                summaryCache.delete(taskId);
+                taskCache.delete(taskId);
                 await loadTasks();
             } else {
                 alert('Error deleting task.');
@@ -357,7 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch (parseError) {
                     data = null;
                 }
-                renderWindowSummary(windowsDiv, data);
+                updateTaskSummaryDisplay(taskId, data);
             } else {
                 windowsDiv.textContent = 'Error fetching windows.';
             }
