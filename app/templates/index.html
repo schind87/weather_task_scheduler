@@ -15,6 +15,8 @@
             <p class="text-gray-600">Schedule your tasks based on weather conditions</p>
         </header>
 
+        <div id="notificationContainer" class="mb-6 space-y-3" aria-live="polite"></div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Task Form -->
             <div class="bg-white rounded-lg shadow-md p-6">
@@ -23,14 +25,17 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Task Name</label>
                         <input type="text" id="taskName" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <p id="taskNameError" class="mt-1 text-sm text-red-600 hidden"></p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">ZIP Code</label>
                         <input type="text" id="location" required inputmode="numeric" placeholder="e.g., 01778" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <p id="locationError" class="mt-1 text-sm text-red-600 hidden"></p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Duration (hours)</label>
                         <input type="number" id="durationHours" required min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <p id="durationHoursError" class="mt-1 text-sm text-red-600 hidden"></p>
                     </div>
 
                     <!-- Temperature Range Section -->
@@ -46,10 +51,12 @@
                                 <div class="flex-1">
                                     <label class="block text-sm text-gray-600">Min Temperature (&deg;F)</label>
                                     <input type="number" id="minTemp" placeholder="Min" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                    <p id="minTempError" class="mt-1 text-sm text-red-600 hidden"></p>
                                 </div>
                                 <div class="flex-1">
                                     <label class="block text-sm text-gray-600">Max Temperature (&deg;F)</label>
                                     <input type="number" id="maxTemp" placeholder="Max" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                    <p id="maxTempError" class="mt-1 text-sm text-red-600 hidden"></p>
                                 </div>
                             </div>
                         </div>
@@ -68,10 +75,12 @@
                                 <div class="flex-1">
                                     <label class="block text-sm text-gray-600">Min Humidity (%)</label>
                                     <input type="number" id="minHumidity" min="0" max="100" placeholder="Min" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                    <p id="minHumidityError" class="mt-1 text-sm text-red-600 hidden"></p>
                                 </div>
                                 <div class="flex-1">
                                     <label class="block text-sm text-gray-600">Max Humidity (%)</label>
                                     <input type="number" id="maxHumidity" min="0" max="100" placeholder="Max" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                    <p id="maxHumidityError" class="mt-1 text-sm text-red-600 hidden"></p>
                                 </div>
                             </div>
                         </div>
@@ -86,14 +95,17 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Earliest Start Time</label>
                         <input type="time" id="earliestStart" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <p id="earliestStartError" class="mt-1 text-sm text-red-600 hidden"></p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Latest Start Time</label>
                         <input type="time" id="latestStart" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <p id="latestStartError" class="mt-1 text-sm text-red-600 hidden"></p>
                     </div>
                     <div class="flex space-x-2">
-                        <button type="submit" id="submitButton" class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                            Add Task
+                        <button type="submit" id="submitButton" class="flex-1 inline-flex items-center justify-center bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition">
+                            <span id="submitButtonSpinner" class="hidden h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent mr-2"></span>
+                            <span id="submitButtonText">Add Task</span>
                         </button>
                         <button type="button" id="cancelEditButton" class="hidden flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2">
                             Cancel

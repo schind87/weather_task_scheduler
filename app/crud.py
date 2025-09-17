@@ -27,7 +27,11 @@ def get_tasks(db: Session):
 def create_task(db: Session, task: schemas.TaskCreate) -> schemas.TaskMutationResponse:
     # Fetch forecast and find scheduling window
     try:
+
         forecast = weather.fetch_hourly_forecast(task.location)
+    except weather.WeatherServiceError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
+
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     window_result = find_windows.find_windows(
@@ -39,7 +43,8 @@ def create_task(db: Session, task: schemas.TaskCreate) -> schemas.TaskMutationRe
         no_rain=bool(task.no_rain),
         duration_hours=task.duration_hours,
         earliest_start=getattr(task, 'earliest_start', None),
-        latest_start=getattr(task, 'latest_start', None)
+        latest_start=getattr(task, 'latest_start', None),
+        timezone_offset=timezone_offset,
     )
     windows = window_result['windows']
     scheduled_time = None
@@ -84,7 +89,11 @@ def update_task(
     for field, value in update_data.items():
         setattr(task, field, value)
     try:
+
         forecast = weather.fetch_hourly_forecast(task.location)
+    except weather.WeatherServiceError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
+
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     window_result = find_windows.find_windows(
@@ -96,7 +105,8 @@ def update_task(
         no_rain=bool(task.no_rain),
         duration_hours=task.duration_hours,
         earliest_start=task.earliest_start,
-        latest_start=task.latest_start
+        latest_start=task.latest_start,
+        timezone_offset=timezone_offset,
     )
     windows = window_result['windows']
     task.scheduled_time = datetime.utcfromtimestamp(windows[0]['start_ts']) if windows else None
