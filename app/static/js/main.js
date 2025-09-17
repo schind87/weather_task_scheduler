@@ -1220,7 +1220,35 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if (response.ok) {
                 const data = await response.json();
-                renderWindowsResults(windowsDiv, data);
+                if (data.possible_windows && data.possible_windows.length > 0) {
+                    windowsDiv.innerHTML = '<b>Possible Windows:</b><br>' + data.possible_windows
+                        .map((window) => `${window.display} (${window.duration})`)
+                        .join('<br>');
+                } else {
+                    const fallbackMessage = data.no_windows_reason || 'No available windows found.';
+                    const blockersIndex = fallbackMessage.indexOf('Common blockers:');
+                    const visibleMessage = blockersIndex !== -1
+                        ? fallbackMessage.slice(0, blockersIndex).trim()
+                        : fallbackMessage;
+                    const hiddenIntro = blockersIndex !== -1
+                        ? fallbackMessage.slice(blockersIndex).trim()
+                        : '';
+
+                    if (data.reason_details && data.reason_details.length > 0) {
+                        const listItems = data.reason_details
+                            .map((detail) => `<li>${detail.reason} (${detail.count})</li>`)
+                            .join('');
+                        const introHtml = hiddenIntro ? `<p>${hiddenIntro}</p>` : '';
+                        const detailsBlock = `<div class="mt-1">${introHtml}<ul class="list-disc pl-5">${listItems}</ul></div>`;
+                        windowsDiv.innerHTML = `<div>${visibleMessage}</div>` +
+                            `<details class="mt-1 text-sm">` +
+                            `<summary class="cursor-pointer text-blue-600">Show details</summary>` +
+                            detailsBlock +
+                            `</details>`;
+                    } else {
+                        windowsDiv.textContent = fallbackMessage;
+                    }
+                }
             } else {
                 renderWindowsError(windowsDiv, 'Unable to fetch windows at this time.');
                 showNotification('error', 'Unable to fetch windows for this task.');
