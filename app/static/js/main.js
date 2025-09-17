@@ -8,6 +8,69 @@ document.addEventListener('DOMContentLoaded', () => {
     const useHumidity = document.getElementById('useHumidity');
     const temperatureInputs = document.getElementById('temperatureInputs');
     const humidityInputs = document.getElementById('humidityInputs');
+    const notificationContainer = document.getElementById('notificationContainer');
+
+    const notificationStyles = {
+        success: 'bg-green-50 border border-green-200 text-green-900',
+        error: 'bg-red-50 border border-red-200 text-red-900',
+        info: 'bg-blue-50 border border-blue-200 text-blue-900',
+    };
+
+    const showNotification = (type, message, options = {}) => {
+        const resolvedMessage = typeof message === 'string' ? message : String(message ?? '');
+        if (!notificationContainer) {
+            if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+                window.alert(resolvedMessage);
+            }
+            return;
+        }
+
+        const styleClass = notificationStyles[type] || notificationStyles.info;
+        const { timeout = 5000 } = options;
+        const wrapper = document.createElement('div');
+        wrapper.className = `pointer-events-auto flex items-start justify-between space-x-3 px-4 py-3 rounded-md shadow transition-opacity duration-300 ${styleClass}`;
+        wrapper.setAttribute('role', 'alert');
+
+        const messageSpan = document.createElement('div');
+        messageSpan.className = 'text-sm flex-1';
+        messageSpan.textContent = resolvedMessage;
+
+        const closeButton = document.createElement('button');
+        closeButton.type = 'button';
+        closeButton.className = 'text-lg leading-none font-semibold text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500';
+        closeButton.setAttribute('aria-label', 'Dismiss notification');
+        closeButton.textContent = '×';
+
+        const removeNotification = () => {
+            if (!wrapper.parentElement) {
+                return;
+            }
+            wrapper.classList.add('opacity-0');
+            setTimeout(() => {
+                wrapper.remove();
+            }, 300);
+        };
+
+        closeButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            removeNotification();
+        });
+
+        wrapper.appendChild(messageSpan);
+        wrapper.appendChild(closeButton);
+        wrapper.classList.add('opacity-0');
+        notificationContainer.appendChild(wrapper);
+        const scheduleFadeIn = typeof requestAnimationFrame === 'function'
+            ? requestAnimationFrame
+            : (callback) => setTimeout(callback, 0);
+        scheduleFadeIn(() => {
+            wrapper.classList.remove('opacity-0');
+        });
+
+        if (timeout > 0) {
+            setTimeout(removeNotification, timeout);
+        }
+    };
 
     let editingTaskId = null;
     const taskCache = new Map();
@@ -206,6 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error loading tasks:', error);
             taskCache.clear();
             taskList.innerHTML = '<p class="text-sm text-red-600">Unable to load tasks.</p>';
+            showNotification('error', 'Unable to load tasks.');
         }
     }
 
@@ -296,6 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const payload = buildTaskPayload();
         const url = editingTaskId ? `/tasks/${editingTaskId}` : '/tasks/';
         const method = editingTaskId ? 'PUT' : 'POST';
+        const wasEditing = Boolean(editingTaskId);
 
         try {
             const response = await fetch(url, {
@@ -307,9 +372,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             let data = null;
+            let parseErrorDetail = null;
             try {
                 data = await response.json();
-            } catch (parseError) {
+            } catch (error) {
+                parseErrorDetail = error;
                 data = null;
             }
 
@@ -320,12 +387,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     taskCache.set(data.task.id, data.task);
                     updateTaskSummaryDisplay(data.task.id, data);
                 }
+                showNotification('success', wasEditing ? 'Task updated successfully.' : 'Task created successfully.');
             } else {
-                const errorMessage = data?.detail || 'Unknown error';
-                alert(`Error saving task: ${errorMessage}`);
+                let errorDetail = `${response.status} ${response.statusText}`.trim();
+                if (data) {
+                    if (typeof data.detail === 'string') {
+                        errorDetail = data.detail;
+                    } else if (Array.isArray(data.detail)) {
+                        errorDetail = data.detail
+                            .map((item) => (typeof item === 'object' && item !== null ? item.msg || JSON.stringify(item) : String(item)))
+                            .join(', ');
+                    }
+                } else if (parseErrorDetail) {
+                    console.error('Failed to parse error response', parseErrorDetail);
+                }
+                showNotification('error', `Error saving task: ${errorDetail || 'Unknown error.'}`);
             }
         } catch (err) {
-            alert('Network or server error while saving task.');
+            console.error('Network or server error while saving task.', err);
+            showNotification('error', 'Network or server error while saving task.');
         }
     });
 
@@ -366,12 +446,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 summaryCache.delete(taskId);
                 taskCache.delete(taskId);
                 await loadTasks();
+                showNotification('success', 'Task deleted successfully.');
             } else {
-                alert('Error deleting task.');
+                showNotification('error', 'Error deleting task.');
             }
         } catch (err) {
             console.error('Error deleting task:', err);
-            alert('Error deleting task.');
+            showNotification('error', 'Error deleting task.');
         }
     }
 
@@ -397,9 +478,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateTaskSummaryDisplay(taskId, data);
             } else {
                 windowsDiv.textContent = 'Error fetching windows.';
+                showNotification('error', 'Error fetching windows.');
             }
         } catch (err) {
             windowsDiv.textContent = 'Error fetching windows.';
+            showNotification('error', 'Error fetching windows.');
         }
     }
 
