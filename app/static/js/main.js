@@ -13,7 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const notificationContainer = document.getElementById('notificationContainer');
     const earliestStartInput = document.getElementById('earliestStart');
     const latestStartInput = document.getElementById('latestStart');
-    const clearTimeButton = document.getElementById('clearTimeButton');
     const notificationStyles = {
         success: 'bg-green-50 border border-green-200 text-green-900',
         error: 'bg-red-50 border border-red-200 text-red-900',
@@ -193,20 +192,6 @@ document.addEventListener('DOMContentLoaded', () => {
             clearSpecificFieldError(fieldId);
         });
     };
-
-    const updateClearTimeButtonState = () => {
-        if (!clearTimeButton) {
-            return;
-        }
-        const hasEarliest = Boolean(earliestStartInput && earliestStartInput.value);
-        const hasLatest = Boolean(latestStartInput && latestStartInput.value);
-        const hasAnyValue = hasEarliest || hasLatest;
-        clearTimeButton.disabled = !hasAnyValue;
-        clearTimeButton.classList.toggle('opacity-50', !hasAnyValue);
-        clearTimeButton.classList.toggle('cursor-not-allowed', !hasAnyValue);
-        clearTimeButton.setAttribute('aria-disabled', (!hasAnyValue).toString());
-    };
-
 
     function buildTimeOptions(intervalMinutes = 30) {
         const options = [];
@@ -595,7 +580,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         earliestStartInput.addEventListener('input', () => {
-            updateClearTimeButtonState();
             syncDropdownSelection('earliestStart');
         });
     }
@@ -612,36 +596,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         latestStartInput.addEventListener('input', () => {
-            updateClearTimeButtonState();
             syncDropdownSelection('latestStart');
         });
     }
-    if (clearTimeButton) {
-        updateClearTimeButtonState();
-        syncAllDropdownSelections();
-        clearTimeButton.addEventListener('click', (event) => {
-            event.preventDefault();
-            if (clearTimeButton.disabled) {
-                return;
-            }
-            if (earliestStartInput) {
-                earliestStartInput.value = '';
-                earliestStartInput.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-            clearSpecificFieldError('earliestStart');
-            if (latestStartInput) {
-                latestStartInput.value = '';
-                latestStartInput.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-            clearSpecificFieldError('latestStart');
-            updateClearTimeButtonState();
-            syncAllDropdownSelections();
-            closeActiveTimePicker();
-            if (earliestStartInput && typeof earliestStartInput.focus === 'function') {
-                earliestStartInput.focus();
-            }
-        });
-    }
+
+    syncAllDropdownSelections();
 
     const buildTemperatureDisplay = (task) => {
         const hasMin = task.min_temp !== undefined && task.min_temp !== null;
@@ -1191,7 +1150,6 @@ document.addEventListener('DOMContentLoaded', () => {
         cancelEditButton.classList.add('hidden');
         setLoadingState(false);
         resetToggleGroups();
-        updateClearTimeButtonState();
         syncAllDropdownSelections();
         closeActiveTimePicker();
     };
@@ -1221,7 +1179,6 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleGroupState(useHumidity, humidityInputs);
         document.getElementById('minHumidity').value = task.min_humidity ?? '';
         document.getElementById('maxHumidity').value = task.max_humidity ?? '';
-        updateClearTimeButtonState();
         syncAllDropdownSelections();
         closeActiveTimePicker();
     };
@@ -1277,7 +1234,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         Duration: ${task.duration_hours} hours<br>
                         ${buildTemperatureDisplay(task)}
                         ${buildHumidityDisplay(task)}
-                        No Rain Required: ${task.no_rain ? 'Yes' : 'No'}<br>
+                        Rain-free conditions required: ${task.no_rain ? 'Yes' : 'No'}<br>
                         Scheduled Time: ${scheduledTimeDisplay}<br>
                         Created: ${createdAt}
                     </p>
