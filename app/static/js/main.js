@@ -321,7 +321,8 @@ document.addEventListener('DOMContentLoaded', () => {
         closeActiveTimePicker();
     }
 
-    function openTimePicker(fieldId) {
+    function openTimePicker(fieldId, options = {}) {
+        const { toggle = true } = options;
         const dropdown = ensureDropdownPopulated(fieldId);
         const input = timeInputs.get(fieldId);
         if (!dropdown || !input) {
@@ -329,7 +330,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const container = input.closest('[data-time-field]');
         if (activeTimePicker && activeTimePicker.fieldId === fieldId) {
-            closeActiveTimePicker();
+            if (toggle) {
+                closeActiveTimePicker();
+            }
             return;
         }
         closeActiveTimePicker();
@@ -568,10 +571,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     if (earliestStartInput) {
-        earliestStartInput.addEventListener('focus', () => openTimePicker('earliestStart'));
+        earliestStartInput.addEventListener('focus', () => openTimePicker('earliestStart', { toggle: false }));
         earliestStartInput.addEventListener('click', (event) => {
             event.preventDefault();
-            openTimePicker('earliestStart');
+            openTimePicker('earliestStart', { toggle: false });
         });
         earliestStartInput.addEventListener('keydown', (event) => {
             if (event.key === 'Enter' || event.key === ' ') {
@@ -584,10 +587,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     if (latestStartInput) {
-        latestStartInput.addEventListener('focus', () => openTimePicker('latestStart'));
+        latestStartInput.addEventListener('focus', () => openTimePicker('latestStart', { toggle: false }));
         latestStartInput.addEventListener('click', (event) => {
             event.preventDefault();
-            openTimePicker('latestStart');
+            openTimePicker('latestStart', { toggle: false });
         });
         latestStartInput.addEventListener('keydown', (event) => {
             if (event.key === 'Enter' || event.key === ' ') {
