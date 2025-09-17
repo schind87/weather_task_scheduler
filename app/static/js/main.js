@@ -152,8 +152,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const locationValue = document.getElementById('location').value.trim();
-        if (!/^[0-9]{5}$/.test(locationValue)) {
-            flagError('location', 'Please enter a valid 5-digit ZIP code.');
+        const zipPattern = /^\d{5}(?:[-\s]?\d{4})?(?:\s*,\s*[A-Za-z]{2})?$/i;
+        if (!zipPattern.test(locationValue)) {
+            flagError(
+                'location',
+                'Please enter a valid ZIP code (5 digits, ZIP+4, or add a country like 12345,CA).',
+            );
         }
 
         const durationInput = document.getElementById('durationHours');
