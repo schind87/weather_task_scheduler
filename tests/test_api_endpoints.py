@@ -47,7 +47,8 @@ def test_create_task_returns_window_using_weather_timezone(monkeypatch):
         {"dt": base_ts, "temp": 70.0, "rain": 0.0, "humidity": 40},
         {"dt": base_ts + 10_800, "temp": 72.0, "rain": 0.0, "humidity": 42},
     ]
-    _install_weather_mock(monkeypatch, forecast, timezone_offset=7_200)
+    timezone_offset = 7_200
+    _install_weather_mock(monkeypatch, forecast, timezone_offset=timezone_offset)
 
     payload = {
         "name": "Morning gardening",
