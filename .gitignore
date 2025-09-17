@@ -1,0 +1,14 @@
+# SQLite database
+/test.db
+
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Virtual environment directories
+.venv/
+ENV/
+venv/
+
+# VSCode settings
+.vscode/
