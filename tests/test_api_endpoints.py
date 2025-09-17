@@ -76,9 +76,7 @@ def test_create_task_returns_window_using_weather_timezone(monkeypatch):
     assert {"reason": "start before earliest allowed (02:00)", "count": 1} in body["reason_details"]
 
     scheduled_time = datetime.fromisoformat(body["task"]["scheduled_time"])
-    assert scheduled_time == datetime.utcfromtimestamp(
-        forecast[1]["dt"] + timezone_offset
-    )
+    assert scheduled_time == datetime.utcfromtimestamp(forecast[1]["dt"])
 
 
 def test_suggestions_endpoint_respects_timezone(monkeypatch):

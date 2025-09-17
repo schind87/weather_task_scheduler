@@ -48,10 +48,8 @@ def create_task(db: Session, task: schemas.TaskCreate) -> schemas.TaskMutationRe
     windows = window_result['windows']
     scheduled_time = None
     if windows:
-        # Use the start_ts of the first available window adjusted to the task's timezone
-        scheduled_time = datetime.utcfromtimestamp(
-            windows[0]["start_ts"] + timezone_offset
-        )
+        # Persist the scheduled time in UTC so the client interprets it correctly.
+        scheduled_time = datetime.utcfromtimestamp(windows[0]["start_ts"])
     db_task = models.Task(
         name=task.name,
         duration_hours=task.duration_hours,
@@ -110,9 +108,7 @@ def update_task(
     )
     windows = window_result['windows']
     task.scheduled_time = (
-        datetime.utcfromtimestamp(windows[0]['start_ts'] + timezone_offset)
-        if windows
-        else None
+        datetime.utcfromtimestamp(windows[0]['start_ts']) if windows else None
     )
     db.commit()
     db.refresh(task)
