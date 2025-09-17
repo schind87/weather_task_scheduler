@@ -91,6 +91,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    const isValidZipInput = (value) => {
+        if (typeof value !== 'string') {
+            return false;
+        }
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return false;
+        }
+        const [basePart, countryPart = ''] = trimmed
+            .split(',', 2)
+            .map((part) => part.trim());
+        const digits = basePart.replace(/\D/g, '');
+        if (digits.length !== 5 && digits.length !== 9) {
+            return false;
+        }
+        if (countryPart) {
+            return /^[A-Za-z]{2}$/.test(countryPart);
+        }
+        return true;
+    };
+
     const setFieldError = (fieldId, message) => {
         const errorElement = fieldErrorElements[fieldId];
         if (errorElement) {
