@@ -64,6 +64,507 @@ document.addEventListener('DOMContentLoaded', () => {
         return value.length >= 5 ? value.slice(0, 5) : value;
     };
 
+    const defaultDateFormatter = new Intl.DateTimeFormat([], {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    });
+
+    const parseIsoDate = (value) => {
+        if (!value) {
+            return null;
+        }
+        const trimmed = typeof value === 'string' ? value.trim() : '';
+        if (!trimmed) {
+            return null;
+        }
+        const hasTimezone = /[zZ]|[+-]\d{2}:?\d{2}$/.test(trimmed);
+        const isoString = hasTimezone ? trimmed : `${trimmed}Z`;
+        const date = new Date(isoString);
+        return Number.isNaN(date.getTime()) ? null : date;
+    };
+
+    const looksLikeIanaZone = (value) => {
+        if (typeof value !== 'string') {
+            return false;
+        }
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return false;
+        }
+        if (trimmed.toUpperCase() === 'UTC' || trimmed.toUpperCase() === 'GMT') {
+            return true;
+        }
+        return trimmed.includes('/') && /^[A-Za-z0-9_+\-]+\/[A-Za-z0-9_+\-]+$/.test(trimmed);
+    };
+
+    const parseUtcOffsetString = (value) => {
+        if (typeof value !== 'string') {
+            return null;
+        }
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return null;
+        }
+        const sanitized = trimmed.replace(/\s+/g, '');
+        const upper = sanitized.toUpperCase();
+        if (upper === 'UTC' || upper === 'GMT' || upper === 'Z') {
+            return 0;
+        }
+        let match = upper.match(/^(?:UTC|GMT)?([+-])(\d{1,2})(?::?(\d{2}))?$/);
+        if (!match) {
+            match = upper.match(/^([+-])(\d{2})(\d{2})$/);
+        }
+        if (!match) {
+            return null;
+        }
+        const sign = match[1] === '-' ? -1 : 1;
+        const hours = parseInt(match[2], 10);
+        const minutes = match[3] ? parseInt(match[3], 10) : 0;
+        if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+            return null;
+        }
+        if (hours > 14 || minutes > 59) {
+            return null;
+        }
+        return sign * (hours * 60 + minutes);
+    };
+
+    const normalizeNumericOffset = (value) => {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return null;
+        }
+        const abs = Math.abs(value);
+        if (abs <= 14 * 60) {
+            return Math.round(value);
+        }
+        if (abs <= 14 * 3600) {
+            return Math.round(value / 60);
+        }
+        if (abs <= 14 * 3600 * 1000) {
+            return Math.round(value / (60 * 1000));
+        }
+        return null;
+    };
+
+    const formatOffsetLabel = (minutes) => {
+        if (!Number.isFinite(minutes)) {
+            return '';
+        }
+        if (minutes === 0) {
+            return 'UTC';
+        }
+        const sign = minutes > 0 ? '+' : '-';
+        const absolute = Math.abs(minutes);
+        const hours = Math.floor(absolute / 60);
+        const mins = absolute % 60;
+        return `UTC${sign}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+    };
+
+    const extractLabelFromObject = (obj) => {
+        if (!obj || typeof obj !== 'object') {
+            return undefined;
+        }
+        const labelKeys = [
+            'label',
+            'abbr',
+            'abbreviation',
+            'short',
+            'short_name',
+            'zoneLabel',
+            'timezone_label',
+            'offset_label',
+        ];
+        for (const key of labelKeys) {
+            const value = obj[key];
+            if (typeof value === 'string' && value.trim()) {
+                return value.trim();
+            }
+        }
+        return undefined;
+    };
+
+    const normalizeOffsetLabel = (label, offsetMinutes) => {
+        if (typeof label !== 'string') {
+            return null;
+        }
+        const trimmed = label.trim();
+        if (!trimmed) {
+            return null;
+        }
+        const parsed = parseUtcOffsetString(trimmed);
+        if (parsed === null) {
+            return null;
+        }
+        return formatOffsetLabel(offsetMinutes);
+    };
+
+    const determineOffsetLabel = (labelHint, rawValue, offsetMinutes) => {
+        const fromHint = normalizeOffsetLabel(labelHint, offsetMinutes);
+        if (fromHint) {
+            return fromHint;
+        }
+        if (typeof rawValue === 'string') {
+            const fromRawString = normalizeOffsetLabel(rawValue, offsetMinutes);
+            if (fromRawString) {
+                return fromRawString;
+            }
+        } else if (typeof rawValue === 'number' && Number.isFinite(rawValue)) {
+            const minutes = normalizeNumericOffset(rawValue);
+            if (minutes !== null) {
+                return formatOffsetLabel(minutes);
+            }
+        }
+        return formatOffsetLabel(offsetMinutes);
+    };
+
+    const parseTimezoneMetadata = (value, labelHint, depth = 0) => {
+        if (value === null || value === undefined) {
+            return null;
+        }
+        if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (!trimmed) {
+                return null;
+            }
+            if (looksLikeIanaZone(trimmed)) {
+                const label = typeof labelHint === 'string' && labelHint.trim()
+                    ? labelHint.trim()
+                    : trimmed;
+                return { type: 'iana', zone: trimmed, label };
+            }
+            const offsetMinutes = parseUtcOffsetString(trimmed);
+            if (offsetMinutes !== null) {
+                return {
+                    type: 'offset',
+                    offsetMinutes,
+                    label: determineOffsetLabel(labelHint, trimmed, offsetMinutes),
+                };
+            }
+            return null;
+        }
+        if (typeof value === 'number') {
+            const offsetMinutes = normalizeNumericOffset(value);
+            if (offsetMinutes !== null) {
+                return {
+                    type: 'offset',
+                    offsetMinutes,
+                    label: determineOffsetLabel(labelHint, value, offsetMinutes),
+                };
+            }
+            return null;
+        }
+        if (Array.isArray(value)) {
+            for (const item of value) {
+                const parsed = parseTimezoneMetadata(item, labelHint, depth + 1);
+                if (parsed) {
+                    return parsed;
+                }
+            }
+            return null;
+        }
+        if (typeof value !== 'object' || depth > 4) {
+            return null;
+        }
+        const nestedLabelHint = typeof labelHint === 'string' && labelHint.trim()
+            ? labelHint.trim()
+            : extractLabelFromObject(value);
+        const zoneKeys = [
+            'timeZone',
+            'timezone',
+            'time_zone',
+            'zone',
+            'name',
+            'iana',
+            'olson',
+            'tz',
+            'tzid',
+            'identifier',
+            'primary',
+            'value',
+        ];
+        for (const key of zoneKeys) {
+            if (Object.prototype.hasOwnProperty.call(value, key)) {
+                const parsed = parseTimezoneMetadata(value[key], nestedLabelHint, depth + 1);
+                if (parsed) {
+                    if (parsed.type === 'iana') {
+                        if (!parsed.label || parseUtcOffsetString(parsed.label)) {
+                            parsed.label = nestedLabelHint && !parseUtcOffsetString(nestedLabelHint)
+                                ? nestedLabelHint
+                                : parsed.zone;
+                        }
+                    }
+                    return parsed;
+                }
+            }
+        }
+        const offsetKeys = [
+            'utc_offset',
+            'offset',
+            'offset_minutes',
+            'offsetMinutes',
+            'raw_offset',
+            'gmt_offset',
+            'offset_min',
+            'offsetMin',
+            'offset_hours',
+            'offsetHours',
+            'minutes',
+        ];
+        for (const key of offsetKeys) {
+            if (Object.prototype.hasOwnProperty.call(value, key)) {
+                const parsed = parseTimezoneMetadata(value[key], nestedLabelHint, depth + 1);
+                if (parsed && parsed.type === 'offset') {
+                    const offsetLabelHint = value.offset_label ?? nestedLabelHint;
+                    parsed.label = determineOffsetLabel(offsetLabelHint, value[key], parsed.offsetMinutes);
+                    return parsed;
+                }
+            }
+        }
+        const nestedKeys = ['metadata', 'info', 'details', 'data', 'values', 'tzinfo', 'extra'];
+        for (const key of nestedKeys) {
+            if (Object.prototype.hasOwnProperty.call(value, key)) {
+                const parsed = parseTimezoneMetadata(value[key], nestedLabelHint, depth + 1);
+                if (parsed) {
+                    return parsed;
+                }
+            }
+        }
+        return null;
+    };
+
+    const extractForecastTimezoneInfo = (metadata) => {
+        if (!metadata) {
+            return null;
+        }
+        const labelHint = typeof metadata.label === 'string' && metadata.label.trim()
+            ? metadata.label.trim()
+            : undefined;
+        const candidateSources = [];
+        if (metadata.raw !== undefined && metadata.raw !== null) {
+            candidateSources.push(metadata.raw);
+        }
+        if (metadata.primary !== undefined && metadata.primary !== null) {
+            candidateSources.push(metadata.primary);
+        }
+        if (metadata.extra !== undefined && metadata.extra !== null) {
+            candidateSources.push(metadata.extra);
+        }
+        if (metadata.offset !== undefined && metadata.offset !== null) {
+            candidateSources.push(metadata.offset);
+        }
+        let bestIana = null;
+        let bestOffset = null;
+        for (const candidate of candidateSources) {
+            const info = parseTimezoneMetadata(candidate, labelHint);
+            if (!info) {
+                continue;
+            }
+            if (info.type === 'iana' && !bestIana) {
+                bestIana = info;
+            } else if (info.type === 'offset' && !bestOffset) {
+                bestOffset = info;
+            }
+            if (bestIana && bestOffset) {
+                break;
+            }
+        }
+        if (!bestIana && !bestOffset && labelHint) {
+            const parsed = parseTimezoneMetadata(labelHint, labelHint);
+            if (parsed) {
+                if (parsed.type === 'iana') {
+                    bestIana = parsed;
+                } else if (parsed.type === 'offset') {
+                    bestOffset = parsed;
+                }
+            }
+        }
+        if (bestIana) {
+            if (!bestIana.label || parseUtcOffsetString(bestIana.label)) {
+                bestIana.label = labelHint && !parseUtcOffsetString(labelHint)
+                    ? labelHint
+                    : bestIana.zone;
+            }
+            return bestIana;
+        }
+        if (bestOffset) {
+            const label = determineOffsetLabel(labelHint, metadata.offset, bestOffset.offsetMinutes);
+            bestOffset.label = label;
+            return bestOffset;
+        }
+        return null;
+    };
+
+    const getForecastTimezoneMetadata = (task) => {
+        if (!task || typeof task !== 'object') {
+            return undefined;
+        }
+        const zoneCandidates = [
+            task.forecast_timezone,
+            task.forecast_timezone_name,
+            task.forecast_timezone_iana,
+            task.forecast_timezone_id,
+            task.forecast_timezone_zone,
+            task.forecast_timezone_code,
+            task.scheduled_time_timezone,
+            task.scheduled_timezone,
+            task.scheduled_time_zone,
+        ];
+        let primary = zoneCandidates.find((value) => value !== undefined && value !== null) ?? null;
+        const labelCandidates = [
+            task.forecast_timezone_label,
+            task.forecast_timezone_abbr,
+            task.forecast_timezone_abbreviation,
+            task.forecast_timezone_short,
+            task.forecast_timezone_display,
+            task.scheduled_time_timezone_label,
+            task.scheduled_timezone_label,
+        ];
+        const label = labelCandidates.find((value) => typeof value === 'string' && value.trim())?.trim();
+        const offsetCandidates = [
+            task.forecast_utc_offset,
+            task.forecast_timezone_offset,
+            task.forecast_timezone_offset_minutes,
+            task.forecast_timezone_offset_seconds,
+            task.forecast_timezone_offset_hours,
+            task.scheduled_time_utc_offset,
+        ];
+        const offset = offsetCandidates.find((value) => value !== undefined && value !== null);
+        const extraCandidates = [
+            task.forecast_timezone_metadata,
+            task.forecast_timezone_info,
+            task.forecast_timezone_details,
+            task.forecast_timezone_data,
+            task.forecast_timezone_meta,
+            task.forecast_timezone_extra,
+            task.scheduled_time_timezone_metadata,
+        ];
+        const extra = extraCandidates.find((value) => value !== undefined && value !== null) ?? null;
+        let raw = typeof task.forecast_timezone === 'object' && task.forecast_timezone !== null
+            ? task.forecast_timezone
+            : null;
+        if (!raw && extra && typeof extra === 'object' && !Array.isArray(extra)) {
+            raw = extra;
+        }
+        if (primary && typeof primary === 'object') {
+            raw = primary;
+            primary = null;
+        }
+        if (!primary && typeof raw === 'string') {
+            primary = raw;
+        }
+        if (!primary && typeof extra === 'object' && extra && typeof extra.timezone === 'string') {
+            primary = extra.timezone;
+        }
+        if (!primary && typeof task.forecast_timezone === 'string') {
+            primary = task.forecast_timezone;
+        }
+        if (!raw && primary && typeof primary === 'object') {
+            raw = primary;
+            primary = null;
+        }
+        if (!raw && typeof task.scheduled_timezone === 'object' && task.scheduled_timezone !== null) {
+            raw = task.scheduled_timezone;
+        }
+        if (!raw && typeof task.scheduled_time_timezone === 'object' && task.scheduled_time_timezone !== null) {
+            raw = task.scheduled_time_timezone;
+        }
+        if (!raw && extra && typeof extra === 'object') {
+            const labelFromExtra = extractLabelFromObject(extra);
+            if (!primary && typeof extra.time_zone === 'string') {
+                primary = extra.time_zone;
+            }
+            if (!raw) {
+                raw = extra;
+            }
+            if (!primary && typeof extra.zone === 'string') {
+                primary = extra.zone;
+            }
+            if (!primary && typeof extra.timeZone === 'string') {
+                primary = extra.timeZone;
+            }
+            if (!primary && typeof extra.name === 'string' && looksLikeIanaZone(extra.name)) {
+                primary = extra.name;
+            }
+            if (!primary && typeof extra.iana === 'string') {
+                primary = extra.iana;
+            }
+            if (!primary && typeof extra.olson === 'string') {
+                primary = extra.olson;
+            }
+            if (!primary && typeof extra.tz === 'string') {
+                primary = extra.tz;
+            }
+            if (!primary && typeof extra.tzid === 'string') {
+                primary = extra.tzid;
+            }
+            if (!primary && typeof extra.identifier === 'string') {
+                primary = extra.identifier;
+            }
+            if (!primary && typeof extra.value === 'string') {
+                primary = extra.value;
+            }
+            if (!primary && labelFromExtra && looksLikeIanaZone(labelFromExtra)) {
+                primary = labelFromExtra;
+            }
+        }
+        const hasInfo = Boolean(
+            (typeof primary === 'string' && primary.trim())
+            || (primary && typeof primary === 'object')
+            || raw
+            || extra
+            || offset !== undefined
+        );
+        if (!hasInfo) {
+            return undefined;
+        }
+        const metadata = {
+            primary,
+            label: label ?? (raw ? extractLabelFromObject(raw) : undefined),
+            offset,
+            raw,
+            extra,
+        };
+        if (!metadata.label && raw) {
+            metadata.label = extractLabelFromObject(raw);
+        }
+        return metadata;
+    };
+
+    const formatDateTime = (value, timezoneMetadata) => {
+        const date = parseIsoDate(value);
+        if (!date) {
+            return '';
+        }
+        const timezoneInfo = extractForecastTimezoneInfo(timezoneMetadata);
+        if (!timezoneInfo) {
+            return defaultDateFormatter.format(date);
+        }
+        if (timezoneInfo.type === 'iana') {
+            try {
+                const formatter = new Intl.DateTimeFormat([], {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                    timeZone: timezoneInfo.zone,
+                });
+                const formatted = formatter.format(date);
+                const label = timezoneInfo.label && !parseUtcOffsetString(timezoneInfo.label)
+                    ? timezoneInfo.label
+                    : timezoneInfo.zone;
+                return label ? `${formatted} ${label}` : formatted;
+            } catch (error) {
+                console.warn('Failed to format using time zone', timezoneInfo.zone, error);
+                return defaultDateFormatter.format(date);
+            }
+        }
+        if (timezoneInfo.type === 'offset') {
+            const shifted = new Date(date.getTime() + timezoneInfo.offsetMinutes * 60 * 1000);
+            const formatted = defaultDateFormatter.format(shifted);
+            const label = timezoneInfo.label || formatOffsetLabel(timezoneInfo.offsetMinutes);
+            return label ? `${formatted} ${label}` : formatted;
+        }
+        return defaultDateFormatter.format(date);
+    };
+
     const resetForm = () => {
         taskForm.reset();
         editingTaskId = null;
@@ -127,9 +628,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const div = document.createElement('div');
         div.className = 'task-item bg-gray-50 p-4 rounded-md border border-gray-200';
 
-        const createdAt = task.created_at ? new Date(`${task.created_at}Z`).toLocaleString() : 'Unknown';
+        const timezoneMetadata = getForecastTimezoneMetadata(task);
+        const createdAt = task.created_at
+            ? formatDateTime(task.created_at) || 'Unknown'
+            : 'Unknown';
         const scheduledTimeDisplay = task.scheduled_time
-            ? new Date(`${task.scheduled_time}Z`).toLocaleString()
+            ? formatDateTime(task.scheduled_time, timezoneMetadata) || 'Not scheduled'
             : 'Not scheduled';
 
         div.innerHTML = `
