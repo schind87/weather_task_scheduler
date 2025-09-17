@@ -11,6 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const temperatureInputs = document.getElementById('temperatureInputs');
     const humidityInputs = document.getElementById('humidityInputs');
     const notificationContainer = document.getElementById('notificationContainer');
+    const earliestStartInput = document.getElementById('earliestStart');
+    const latestStartInput = document.getElementById('latestStart');
+    const clearTimeButton = document.getElementById('clearTimeButton');
     const notificationStyles = {
         success: 'bg-green-50 border border-green-200 text-green-900',
         error: 'bg-red-50 border border-red-200 text-red-900',
@@ -221,6 +224,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    const updateClearTimeButtonState = () => {
+        if (!clearTimeButton) {
+            return;
+        }
+        const hasEarliest = Boolean(earliestStartInput && earliestStartInput.value);
+        const hasLatest = Boolean(latestStartInput && latestStartInput.value);
+        const hasAnyValue = hasEarliest || hasLatest;
+        clearTimeButton.disabled = !hasAnyValue;
+        clearTimeButton.classList.toggle('opacity-50', !hasAnyValue);
+        clearTimeButton.classList.toggle('cursor-not-allowed', !hasAnyValue);
+        clearTimeButton.setAttribute('aria-disabled', (!hasAnyValue).toString());
+    };
+
     const isValidZipInput = (value) => {
         if (typeof value !== 'string') {
             return false;
@@ -407,6 +423,34 @@ document.addEventListener('DOMContentLoaded', () => {
             clearSpecificFieldError('maxHumidity');
         }
     });
+
+    if (earliestStartInput) {
+        earliestStartInput.addEventListener('input', updateClearTimeButtonState);
+    }
+    if (latestStartInput) {
+        latestStartInput.addEventListener('input', updateClearTimeButtonState);
+    }
+    if (clearTimeButton) {
+        updateClearTimeButtonState();
+        clearTimeButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            if (clearTimeButton.disabled) {
+                return;
+            }
+            if (earliestStartInput) {
+                earliestStartInput.value = '';
+                clearSpecificFieldError('earliestStart');
+            }
+            if (latestStartInput) {
+                latestStartInput.value = '';
+                clearSpecificFieldError('latestStart');
+            }
+            updateClearTimeButtonState();
+            if (earliestStartInput && typeof earliestStartInput.focus === 'function') {
+                earliestStartInput.focus();
+            }
+        });
+    }
 
     const buildTemperatureDisplay = (task) => {
         const hasMin = task.min_temp !== undefined && task.min_temp !== null;
@@ -956,6 +1000,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cancelEditButton.classList.add('hidden');
         setLoadingState(false);
         resetToggleGroups();
+        updateClearTimeButtonState();
     };
 
     const enterEditMode = (task) => {
@@ -983,6 +1028,7 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleGroupState(useHumidity, humidityInputs);
         document.getElementById('minHumidity').value = task.min_humidity ?? '';
         document.getElementById('maxHumidity').value = task.max_humidity ?? '';
+        updateClearTimeButtonState();
     };
 
     cancelEditButton.addEventListener('click', () => {

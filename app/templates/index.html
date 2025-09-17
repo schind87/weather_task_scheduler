@@ -102,6 +102,16 @@
                         <input type="time" id="latestStart" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                         <p id="latestStartError" class="mt-1 text-sm text-red-600 hidden"></p>
                     </div>
+                    <div class="flex justify-end">
+                        <button
+                            type="button"
+                            id="clearTimeButton"
+                            class="text-sm text-blue-600 hover:text-blue-800 focus:outline-none focus:underline"
+                            title="Clear the earliest and latest start time fields"
+                        >
+                            Clear times
+                        </button>
+                    </div>
                     <div class="flex space-x-2">
                         <button type="submit" id="submitButton" class="flex-1 inline-flex items-center justify-center bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition">
                             <span id="submitButtonSpinner" class="hidden h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent mr-2"></span>
@@ -124,6 +134,33 @@
         </div>
     </div>
 
+    <script>
+        (function logAssetDebugInfo() {
+            const debugPayload = {{ asset_debug | tojson }};
+            if (!debugPayload || typeof window === 'undefined' || !window.console) {
+                return;
+            }
+            const { serverTime, assets } = debugPayload;
+            const labelledAssets = Object.values(assets || {});
+            console.info('[Weather Task Scheduler] Server asset snapshot', {
+                serverTime,
+                assets: labelledAssets,
+            });
+            if (labelledAssets.length > 0) {
+                const freshnessSummary = labelledAssets
+                    .map((asset) => {
+                        const label = asset?.label || asset?.path || 'unknown asset';
+                        const updated = asset?.lastModified || 'unknown time';
+                        const ageSeconds = typeof asset?.ageSeconds === 'number'
+                            ? `${asset.ageSeconds}s old`
+                            : 'age unknown';
+                        return `${label}: ${updated} (${ageSeconds})`;
+                    })
+                    .join(', ');
+                console.info('[Weather Task Scheduler] Asset freshness -> %s', freshnessSummary);
+            }
+        })();
+    </script>
     <script src="/static/js/main.js"></script>
 </body>
 </html>
