@@ -207,6 +207,194 @@ document.addEventListener('DOMContentLoaded', () => {
         clearTimeButton.setAttribute('aria-disabled', (!hasAnyValue).toString());
     };
 
+
+    function buildTimeOptions(intervalMinutes = 30) {
+        const options = [];
+        for (let totalMinutes = 0; totalMinutes < 24 * 60; totalMinutes += intervalMinutes) {
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            const value = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+            const period = hours >= 12 ? 'PM' : 'AM';
+            const displayHour = ((hours + 11) % 12) + 1;
+            const displayMinutes = String(minutes).padStart(2, '0');
+            options.push({
+                value,
+                label: `${displayHour}:${displayMinutes} ${period}`,
+            });
+        }
+        return options;
+    }
+
+    const TIME_OPTIONS = buildTimeOptions(30);
+    const timeInputs = new Map([
+        ['earliestStart', earliestStartInput],
+        ['latestStart', latestStartInput],
+    ]);
+
+    const timeDropdowns = new Map();
+    document.querySelectorAll('[data-time-dropdown]').forEach((dropdown) => {
+        const fieldId = dropdown.getAttribute('data-time-dropdown');
+        if (fieldId) {
+            timeDropdowns.set(fieldId, dropdown);
+        }
+    });
+
+    const timeClearButtons = new Map();
+    document.querySelectorAll('[data-clear-time]').forEach((button) => {
+        const fieldId = button.getAttribute('data-clear-time');
+        if (fieldId) {
+            timeClearButtons.set(fieldId, button);
+        }
+    });
+
+    let activeTimePicker = null;
+
+    function ensureDropdownPopulated(fieldId) {
+        const dropdown = timeDropdowns.get(fieldId);
+        if (!dropdown || dropdown.dataset.initialized === 'true') {
+            return dropdown || null;
+        }
+        const fragment = document.createDocumentFragment();
+        TIME_OPTIONS.forEach((option) => {
+            const optionButton = document.createElement('button');
+            optionButton.type = 'button';
+            optionButton.className = 'block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700';
+            optionButton.dataset.timeValue = option.value;
+            optionButton.setAttribute('role', 'option');
+            optionButton.textContent = option.label;
+            optionButton.addEventListener('click', () => {
+                handleTimeSelection(fieldId, option.value);
+            });
+            fragment.appendChild(optionButton);
+        });
+        dropdown.appendChild(fragment);
+        dropdown.dataset.initialized = 'true';
+        return dropdown;
+    }
+
+    function updateClearButtonVisibility(fieldId) {
+        const button = timeClearButtons.get(fieldId);
+        const input = timeInputs.get(fieldId);
+        if (!button || !input) {
+            return;
+        }
+        button.classList.toggle('hidden', !input.value);
+    }
+
+    function syncDropdownSelection(fieldId) {
+        const dropdown = ensureDropdownPopulated(fieldId);
+        const input = timeInputs.get(fieldId);
+        if (!dropdown || !input) {
+            return;
+        }
+        const currentValue = input.value;
+        let activeOption = null;
+        dropdown.querySelectorAll('[data-time-value]').forEach((button) => {
+            const isActive = button.dataset.timeValue === currentValue;
+            button.setAttribute('aria-selected', String(isActive));
+            button.classList.toggle('bg-blue-100', isActive);
+            button.classList.toggle('text-blue-700', isActive);
+            if (isActive) {
+                activeOption = button;
+            }
+        });
+        if (activeOption) {
+            activeOption.scrollIntoView({ block: 'nearest' });
+        }
+        updateClearButtonVisibility(fieldId);
+    }
+
+    function syncAllDropdownSelections() {
+        syncDropdownSelection('earliestStart');
+        syncDropdownSelection('latestStart');
+    }
+
+    function closeActiveTimePicker() {
+        if (!activeTimePicker) {
+            return;
+        }
+        const { dropdown, input, container } = activeTimePicker;
+        dropdown.classList.add('hidden');
+        if (input) {
+            input.setAttribute('aria-expanded', 'false');
+        }
+        if (container) {
+            container.classList.remove('z-50');
+        }
+        activeTimePicker = null;
+    }
+
+    function handleTimeSelection(fieldId, value) {
+        const input = timeInputs.get(fieldId);
+        if (!input) {
+            return;
+        }
+        input.value = value;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        clearSpecificFieldError(fieldId);
+        updateClearButtonVisibility(fieldId);
+        closeActiveTimePicker();
+    }
+
+    function openTimePicker(fieldId) {
+        const dropdown = ensureDropdownPopulated(fieldId);
+        const input = timeInputs.get(fieldId);
+        if (!dropdown || !input) {
+            return;
+        }
+        const container = input.closest('[data-time-field]');
+        if (activeTimePicker && activeTimePicker.fieldId === fieldId) {
+            closeActiveTimePicker();
+            return;
+        }
+        closeActiveTimePicker();
+        dropdown.classList.remove('hidden');
+        if (container) {
+            container.classList.add('z-50');
+        }
+        input.setAttribute('aria-expanded', 'true');
+        activeTimePicker = { fieldId, dropdown, input, container };
+        syncDropdownSelection(fieldId);
+    }
+
+    document.addEventListener('click', (event) => {
+        if (!activeTimePicker) {
+            return;
+        }
+        const { dropdown, container } = activeTimePicker;
+        if (dropdown.contains(event.target)) {
+            return;
+        }
+        if (container && container.contains(event.target)) {
+            return;
+        }
+        closeActiveTimePicker();
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeActiveTimePicker();
+        }
+    });
+
+    timeClearButtons.forEach((button, fieldId) => {
+        const input = timeInputs.get(fieldId);
+        if (!input) {
+            return;
+        }
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            input.value = '';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            clearSpecificFieldError(fieldId);
+            updateClearButtonVisibility(fieldId);
+            syncDropdownSelection(fieldId);
+            if (activeTimePicker && activeTimePicker.fieldId === fieldId) {
+                closeActiveTimePicker();
+            }
+        });
+    });
+
     const isValidZipInput = (value) => {
         if (typeof value !== 'string') {
             return false;
@@ -395,13 +583,42 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     if (earliestStartInput) {
-        earliestStartInput.addEventListener('input', updateClearTimeButtonState);
+        earliestStartInput.addEventListener('focus', () => openTimePicker('earliestStart'));
+        earliestStartInput.addEventListener('click', (event) => {
+            event.preventDefault();
+            openTimePicker('earliestStart');
+        });
+        earliestStartInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                openTimePicker('earliestStart');
+            }
+        });
+        earliestStartInput.addEventListener('input', () => {
+            updateClearTimeButtonState();
+            syncDropdownSelection('earliestStart');
+        });
     }
     if (latestStartInput) {
-        latestStartInput.addEventListener('input', updateClearTimeButtonState);
+        latestStartInput.addEventListener('focus', () => openTimePicker('latestStart'));
+        latestStartInput.addEventListener('click', (event) => {
+            event.preventDefault();
+            openTimePicker('latestStart');
+        });
+        latestStartInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                openTimePicker('latestStart');
+            }
+        });
+        latestStartInput.addEventListener('input', () => {
+            updateClearTimeButtonState();
+            syncDropdownSelection('latestStart');
+        });
     }
     if (clearTimeButton) {
         updateClearTimeButtonState();
+        syncAllDropdownSelections();
         clearTimeButton.addEventListener('click', (event) => {
             event.preventDefault();
             if (clearTimeButton.disabled) {
@@ -409,13 +626,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (earliestStartInput) {
                 earliestStartInput.value = '';
-                clearSpecificFieldError('earliestStart');
+                earliestStartInput.dispatchEvent(new Event('input', { bubbles: true }));
             }
+            clearSpecificFieldError('earliestStart');
             if (latestStartInput) {
                 latestStartInput.value = '';
-                clearSpecificFieldError('latestStart');
+                latestStartInput.dispatchEvent(new Event('input', { bubbles: true }));
             }
+            clearSpecificFieldError('latestStart');
             updateClearTimeButtonState();
+            syncAllDropdownSelections();
+            closeActiveTimePicker();
             if (earliestStartInput && typeof earliestStartInput.focus === 'function') {
                 earliestStartInput.focus();
             }
@@ -971,6 +1192,8 @@ document.addEventListener('DOMContentLoaded', () => {
         setLoadingState(false);
         resetToggleGroups();
         updateClearTimeButtonState();
+        syncAllDropdownSelections();
+        closeActiveTimePicker();
     };
 
     const enterEditMode = (task) => {
@@ -999,6 +1222,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('minHumidity').value = task.min_humidity ?? '';
         document.getElementById('maxHumidity').value = task.max_humidity ?? '';
         updateClearTimeButtonState();
+        syncAllDropdownSelections();
+        closeActiveTimePicker();
     };
 
     cancelEditButton.addEventListener('click', () => {
