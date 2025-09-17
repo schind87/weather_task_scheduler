@@ -20,3 +20,4 @@ uvicorn app.main:app --reload
 Ensure the deployment environment (systemd unit, container orchestrator, managed
 hosting, etc.) also provides `OPENWEATHER_API_KEY` so the service can authenticate
 against OpenWeather during startup.
+

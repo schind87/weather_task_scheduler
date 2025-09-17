@@ -1,4 +1,6 @@
+
 import os
+
 
 import requests
 
@@ -43,8 +45,11 @@ def _normalize_zip(zip_code: str) -> str:
     return f"{digits},{country}"
 
 
-def fetch_hourly_forecast(zip_code: str):
-    """Fetch the next five days of hourly weather for a ZIP code."""
+def fetch_hourly_forecast(zip_code: str) -> Tuple[List[Dict[str, float]], int]:
+    """Fetch the next five days of hourly weather for a ZIP code.
+
+    Returns a tuple of (hourly blocks, location timezone offset).
+    """
     normalized = _normalize_zip(zip_code)
     url = (
         "https://api.openweathermap.org/data/2.5/forecast?"
@@ -53,6 +58,7 @@ def fetch_hourly_forecast(zip_code: str):
     try:
         resp = requests.get(url, timeout=10)
     except requests.RequestException as exc:
+
         raise WeatherServiceError(
             "Unable to reach weather service.", status_code=503
         ) from exc
@@ -82,6 +88,7 @@ def fetch_hourly_forecast(zip_code: str):
                 "humidity": entry["main"].get("humidity"),
             }
         )
+
     return results
 
 
