@@ -4,17 +4,19 @@ A FastAPI service to schedule tasks that require certain weather conditions (e.g
 - Add/view/edit/delete your tasks via `/tasks`
 - Get weather-based suggestions via `/suggestions`
 
-## Configuration
+## Environment variables
 
-The service now requires an [OpenWeather](https://openweathermap.org/api) API key.  Provide the
-credential through the `OPENWEATHER_API_KEY` environment variable before starting FastAPI or
-running tests. For example:
+Set the `OPENWEATHER_API_KEY` environment variable with your
+[OpenWeather](https://openweathermap.org/api) credential before starting the
+application or running tests.
 
 ```bash
 export OPENWEATHER_API_KEY="your-openweather-api-key"
 uvicorn app.main:app --reload
 ```
 
-When deploying, configure the runtime environment (e.g., systemd unit, container orchestrator,
-or hosting provider dashboard) to inject the same environment variable so the application can
-authenticate against OpenWeather during startup.
+### Deployment
+
+Ensure the deployment environment (systemd unit, container orchestrator, managed
+hosting, etc.) also provides `OPENWEATHER_API_KEY` so the service can authenticate
+against OpenWeather during startup.
