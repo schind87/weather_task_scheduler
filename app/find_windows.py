@@ -117,8 +117,10 @@ def find_windows(
         start_idx = i
         total_hours = 0
         j = i
-        last_dt = forecast[start_idx]['dt']
+        window_start = forecast[start_idx]['dt']
+        last_dt = window_start
         window_failed = False
+        window_emitted = False
         while j < n:
             block = forecast[j]
             if j > start_idx and block['dt'] - last_dt != block_hours * 3600:
@@ -146,10 +148,12 @@ def find_windows(
             total_hours += block_hours
             last_dt = block['dt']
             j += 1
-        if total_hours < duration_hours and j >= n:
+            if total_hours >= duration_hours:
+                window_emitted = True
+                break
+        if not window_emitted and total_hours < duration_hours and j >= n:
             failures['forecast horizon ended before reaching required duration'] += 1
-        if not window_failed and total_hours >= duration_hours:
-            window_start = forecast[start_idx]['dt']
+        if (window_emitted or (not window_failed and total_hours >= duration_hours)) and not window_failed:
             window_end = last_dt + block_hours * 3600
             actual_hours = int((window_end - window_start) / 3600)
             valid_windows.append(
