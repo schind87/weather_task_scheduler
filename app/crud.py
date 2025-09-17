@@ -1,8 +1,22 @@
-from sqlalchemy.orm import Session
-from . import models, schemas
 from datetime import datetime
-from . import weather, find_windows
+from typing import Any, Dict, Optional
+
 from fastapi import HTTPException
+from sqlalchemy.orm import Session
+
+from . import find_windows, models, schemas, weather
+
+
+def _build_task_response(
+    task: models.Task, window_result: Dict[str, Any]
+) -> schemas.TaskMutationResponse:
+    """Construct the response payload for task mutations."""
+    return schemas.TaskMutationResponse(
+        task=schemas.Task.model_validate(task),
+        possible_windows=window_result.get("windows", []),
+        reason_summary=window_result.get("reason_summary"),
+        reason_details=window_result.get("reason_details", []),
+    )
 
 def get_task(db: Session, task_id: int):
     return db.query(models.Task).filter(models.Task.id == task_id).first()
@@ -10,7 +24,7 @@ def get_task(db: Session, task_id: int):
 def get_tasks(db: Session):
     return db.query(models.Task).all()
 
-def create_task(db: Session, task: schemas.TaskCreate):
+def create_task(db: Session, task: schemas.TaskCreate) -> schemas.TaskMutationResponse:
     # Fetch forecast and find scheduling window
     try:
 
@@ -54,7 +68,7 @@ def create_task(db: Session, task: schemas.TaskCreate):
     db.add(db_task)
     db.commit()
     db.refresh(db_task)
-    return db_task
+    return _build_task_response(db_task, window_result)
 
 def delete_task(db: Session, task_id: int):
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
@@ -64,11 +78,13 @@ def delete_task(db: Session, task_id: int):
         return True
     return False
 
-def update_task(db: Session, task_id: int, task_update: schemas.TaskCreate):
+def update_task(
+    db: Session, task_id: int, task_update: schemas.TaskCreate
+) -> Optional[schemas.TaskMutationResponse]:
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not task:
         return None
-    update_data = task_update.dict()
+    update_data = task_update.model_dump()
     update_data.pop('scheduled_time', None)
     for field, value in update_data.items():
         setattr(task, field, value)
@@ -96,4 +112,4 @@ def update_task(db: Session, task_id: int, task_update: schemas.TaskCreate):
     task.scheduled_time = datetime.utcfromtimestamp(windows[0]['start_ts']) if windows else None
     db.commit()
     db.refresh(task)
-    return task
+    return _build_task_response(task, window_result)

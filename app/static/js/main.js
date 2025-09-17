@@ -11,21 +11,151 @@ document.addEventListener('DOMContentLoaded', () => {
     const temperatureInputs = document.getElementById('temperatureInputs');
     const humidityInputs = document.getElementById('humidityInputs');
     const notificationContainer = document.getElementById('notificationContainer');
+    const notificationStyles = {
+        success: 'bg-green-50 border border-green-200 text-green-900',
+        error: 'bg-red-50 border border-red-200 text-red-900',
+        info: 'bg-blue-50 border border-blue-200 text-blue-900',
+    };
 
-    const fieldErrorElements = {
-        taskName: document.getElementById('taskNameError'),
-        location: document.getElementById('locationError'),
-        durationHours: document.getElementById('durationHoursError'),
-        minTemp: document.getElementById('minTempError'),
-        maxTemp: document.getElementById('maxTempError'),
-        minHumidity: document.getElementById('minHumidityError'),
-        maxHumidity: document.getElementById('maxHumidityError'),
-        earliestStart: document.getElementById('earliestStartError'),
-        latestStart: document.getElementById('latestStartError'),
+    const showNotification = (type, message, options = {}) => {
+        const resolvedMessage = typeof message === 'string' ? message : String(message ?? '');
+        if (!notificationContainer) {
+            if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+                window.alert(resolvedMessage);
+            }
+            return;
+        }
+
+        const styleClass = notificationStyles[type] || notificationStyles.info;
+        const { timeout = 5000 } = options;
+        const wrapper = document.createElement('div');
+        wrapper.className = `pointer-events-auto flex items-start justify-between space-x-3 px-4 py-3 rounded-md shadow transition-opacity duration-300 ${styleClass}`;
+        wrapper.setAttribute('role', 'alert');
+
+        const messageSpan = document.createElement('div');
+        messageSpan.className = 'text-sm flex-1';
+        messageSpan.textContent = resolvedMessage;
+
+        const closeButton = document.createElement('button');
+        closeButton.type = 'button';
+        closeButton.className = 'text-lg leading-none font-semibold text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500';
+        closeButton.setAttribute('aria-label', 'Dismiss notification');
+        closeButton.textContent = '×';
+
+        const removeNotification = () => {
+            if (!wrapper.parentElement) {
+                return;
+            }
+            wrapper.classList.add('opacity-0');
+            setTimeout(() => {
+                wrapper.remove();
+            }, 300);
+        };
+
+        closeButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            removeNotification();
+        });
+
+        wrapper.appendChild(messageSpan);
+        wrapper.appendChild(closeButton);
+        wrapper.classList.add('opacity-0');
+        notificationContainer.appendChild(wrapper);
+        const scheduleFadeIn = typeof requestAnimationFrame === 'function'
+            ? requestAnimationFrame
+            : (callback) => setTimeout(callback, 0);
+        scheduleFadeIn(() => {
+            wrapper.classList.remove('opacity-0');
+        });
+
+        if (timeout > 0) {
+            setTimeout(removeNotification, timeout);
+        }
     };
 
     let editingTaskId = null;
     const taskCache = new Map();
+    const summaryCache = new Map();
+
+    const normaliseSummary = (rawSummary) => {
+        if (!rawSummary || typeof rawSummary !== 'object') {
+            return null;
+        }
+        const hasPossibleWindows = Object.prototype.hasOwnProperty.call(rawSummary, 'possible_windows');
+        const possibleWindows = hasPossibleWindows && Array.isArray(rawSummary.possible_windows)
+            ? rawSummary.possible_windows.map((window) => ({ ...window }))
+            : [];
+        const hasReasonSummary = Object.prototype.hasOwnProperty.call(rawSummary, 'reason_summary');
+        const reasonSummary = hasReasonSummary ? rawSummary.reason_summary ?? null : null;
+        const hasReasonDetails = Object.prototype.hasOwnProperty.call(rawSummary, 'reason_details');
+        const reasonDetails = hasReasonDetails && Array.isArray(rawSummary.reason_details)
+            ? rawSummary.reason_details.map((detail) => ({ ...detail }))
+            : [];
+
+        if (!hasPossibleWindows && !hasReasonSummary && !hasReasonDetails) {
+            return null;
+        }
+
+        return {
+            possible_windows: possibleWindows,
+            reason_summary: reasonSummary,
+            reason_details: reasonDetails,
+        };
+    };
+
+    const renderWindowSummary = (windowsDiv, summary) => {
+        if (!windowsDiv) {
+            return;
+        }
+        if (!summary) {
+            windowsDiv.textContent = 'Summary unavailable.';
+            return;
+        }
+        const possibleWindows = summary.possible_windows;
+        const reasonSummary = summary.reason_summary || '';
+        const reasonDetails = summary.reason_details;
+
+        if (possibleWindows.length > 0) {
+            windowsDiv.innerHTML = '<b>Possible Windows:</b><br>' + possibleWindows
+                .map((window) => `${window.display} (${window.duration})`)
+                .join('<br>');
+            return;
+        }
+
+        const fallbackMessage = reasonSummary || 'No available windows found.';
+        const blockersIndex = fallbackMessage.indexOf('Common blockers:');
+        const visibleMessage = blockersIndex !== -1
+            ? fallbackMessage.slice(0, blockersIndex).trim()
+            : fallbackMessage;
+        const hiddenIntro = blockersIndex !== -1
+            ? fallbackMessage.slice(blockersIndex).trim()
+            : '';
+
+        if (reasonDetails.length > 0) {
+            const listItems = reasonDetails
+                .map((detail) => `<li>${detail.reason} (${detail.count})</li>`)
+                .join('');
+            const introHtml = hiddenIntro ? `<p>${hiddenIntro}</p>` : '';
+            windowsDiv.innerHTML = `<div>${visibleMessage}</div>` +
+                `<details class="mt-1 text-sm">` +
+                `<summary class="cursor-pointer text-blue-600">Show details</summary>` +
+                `<div class="mt-1">${introHtml}<ul class="list-disc pl-5">${listItems}</ul></div>` +
+                `</details>`;
+        } else {
+            windowsDiv.textContent = fallbackMessage;
+        }
+    };
+
+    const updateTaskSummaryDisplay = (taskId, rawSummary) => {
+        const summary = normaliseSummary(rawSummary);
+        if (summary) {
+            summaryCache.set(taskId, summary);
+        } else {
+            summaryCache.delete(taskId);
+        }
+        const windowsDiv = document.getElementById(`windows-${taskId}`);
+        renderWindowSummary(windowsDiv, summary);
+    };
 
     const notificationStyles = {
         success: 'bg-green-50 border-green-200 text-green-800',
@@ -871,6 +1001,11 @@ document.addEventListener('DOMContentLoaded', () => {
             tasks.forEach((task) => {
                 taskCache.set(task.id, task);
                 taskList.appendChild(createTaskElement(task));
+                const cachedSummary = summaryCache.get(task.id);
+                if (cachedSummary) {
+                    const windowsDiv = document.getElementById(`windows-${task.id}`);
+                    renderWindowSummary(windowsDiv, cachedSummary);
+                }
             });
         } catch (error) {
             console.error('Error loading tasks:', error);
@@ -996,6 +1131,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isEditing = Boolean(editingTaskId);
         const url = editingTaskId ? `/tasks/${editingTaskId}` : '/tasks/';
         const method = editingTaskId ? 'PUT' : 'POST';
+        const wasEditing = Boolean(editingTaskId);
 
         try {
             setLoadingState(true);
@@ -1007,31 +1143,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(payload),
             });
 
+            let data = null;
+            let parseErrorDetail = null;
+            try {
+                data = await response.json();
+            } catch (error) {
+                parseErrorDetail = error;
+                data = null;
+            }
+
             if (response.ok) {
                 showNotification('success', isEditing ? 'Task updated successfully.' : 'Task created successfully.');
                 resetForm();
                 await loadTasks();
+                if (data?.task?.id) {
+                    taskCache.set(data.task.id, data.task);
+                    updateTaskSummaryDisplay(data.task.id, data);
+                }
+                showNotification('success', wasEditing ? 'Task updated successfully.' : 'Task created successfully.');
             } else {
                 let errorDetail = `${response.status} ${response.statusText}`.trim();
-                try {
-                    const errorData = await response.json();
-                    if (errorData) {
-                        if (typeof errorData.detail === 'string') {
-                            errorDetail = errorData.detail;
-                        } else if (Array.isArray(errorData.detail)) {
-                            errorDetail = errorData.detail.map((item) => item.msg || String(item)).join(', ');
-                        }
+                if (data) {
+                    if (typeof data.detail === 'string') {
+                        errorDetail = data.detail;
+                    } else if (Array.isArray(data.detail)) {
+                        errorDetail = data.detail
+                            .map((item) => (typeof item === 'object' && item !== null ? item.msg || JSON.stringify(item) : String(item)))
+                            .join(', ');
                     }
-                } catch (parseErr) {
-                    console.error('Failed to parse error response', parseErr);
+                } else if (parseErrorDetail) {
+                    console.error('Failed to parse error response', parseErrorDetail);
                 }
                 showNotification('error', `Error saving task: ${errorDetail || 'Unknown error.'}`);
             }
         } catch (err) {
             console.error('Network or server error while saving task.', err);
             showNotification('error', 'Network or server error while saving task.');
-        } finally {
-            setLoadingState(false);
         }
     });
 
@@ -1069,6 +1216,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (editingTaskId === taskId) {
                     resetForm();
                 }
+                summaryCache.delete(taskId);
+                taskCache.delete(taskId);
                 await loadTasks();
                 showNotification('success', 'Task deleted successfully.');
             } else {
@@ -1219,16 +1368,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ task_id: taskId }),
             });
             if (response.ok) {
-                const data = await response.json();
-                renderWindowsResults(windowsDiv, data);
+
+                let data = null;
+                try {
+                    data = await response.json();
+                } catch (parseError) {
+                    data = null;
+                }
+                updateTaskSummaryDisplay(taskId, data);
             } else {
-                renderWindowsError(windowsDiv, 'Unable to fetch windows at this time.');
-                showNotification('error', 'Unable to fetch windows for this task.');
+                windowsDiv.textContent = 'Error fetching windows.';
+                showNotification('error', 'Error fetching windows.');
             }
         } catch (err) {
-            console.error('Error fetching windows:', err);
-            renderWindowsError(windowsDiv, 'Unable to fetch windows at this time.');
-            showNotification('error', 'Unable to fetch windows for this task.');
+            windowsDiv.textContent = 'Error fetching windows.';
+            showNotification('error', 'Error fetching windows.');
         }
     }
 

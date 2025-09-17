@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 class TaskBase(BaseModel):
@@ -36,8 +36,7 @@ class Task(TaskBase):
     id: int
     created_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SuggestionRequest(BaseModel):
@@ -55,7 +54,15 @@ class ReasonDetail(BaseModel):
     count: int
 
 
-class SuggestionResponse(BaseModel):
+class WindowSummary(BaseModel):
     possible_windows: List[WindowResult]
-    no_windows_reason: Optional[str] = None
+    reason_summary: Optional[str] = None
     reason_details: List[ReasonDetail] = Field(default_factory=list)
+
+
+class SuggestionResponse(WindowSummary):
+    pass
+
+
+class TaskMutationResponse(WindowSummary):
+    task: Task
