@@ -43,7 +43,7 @@
                         <div class="flex items-center mb-2">
                             <input type="checkbox" id="useTemperature" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                             <label for="useTemperature" class="ml-2 block text-sm font-medium text-gray-700">
-                                Use Temperature Range
+                                Filter by temperature range
                             </label>
                         </div>
                         <div id="temperatureInputs" class="space-y-2 opacity-50 pointer-events-none">
@@ -67,7 +67,7 @@
                         <div class="flex items-center mb-2">
                             <input type="checkbox" id="useHumidity" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                             <label for="useHumidity" class="ml-2 block text-sm font-medium text-gray-700">
-                                Use Humidity Range
+                                Filter by humidity range
                             </label>
                         </div>
                         <div id="humidityInputs" class="space-y-2 opacity-50 pointer-events-none">
@@ -89,7 +89,7 @@
                     <div class="flex items-center">
                         <input type="checkbox" id="noRain" checked class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                         <label for="noRain" class="ml-2 block text-sm text-gray-700">
-                            No rain required
+                            Require rain-free conditions
                         </label>
                     </div>
                     <div>
@@ -153,16 +153,6 @@
                             </div>
                         </div>
                         <p id="latestStartError" class="mt-1 text-sm text-red-600 hidden"></p>
-                    </div>
-                    <div class="flex justify-end">
-                        <button
-                            type="button"
-                            id="clearTimeButton"
-                            class="text-sm text-blue-600 hover:text-blue-800 focus:outline-none focus:underline"
-                            title="Clear the earliest and latest start time fields"
-                        >
-                            Clear times
-                        </button>
                     </div>
                     <div class="flex space-x-2">
                         <button type="submit" id="submitButton" class="flex-1 inline-flex items-center justify-center bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition">
