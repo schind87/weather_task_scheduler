@@ -1,13 +1,15 @@
-from fastapi import FastAPI, Depends, HTTPException
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Dict, List
+
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
-from fastapi import Request
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
-from . import models, schemas, crud, weather, find_windows
-import os
-from typing import List
+from sqlalchemy.orm import Session, sessionmaker
+
+from . import crud, find_windows, models, schemas, weather
 
 DATABASE_URL = "sqlite:///./test.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
@@ -31,9 +33,55 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 # Templates
 templates = Jinja2Templates(directory="app/templates")
 
+APP_DIR = Path(__file__).resolve().parent
+
+
+def _build_asset_debug_payload() -> Dict[str, object]:
+    """Return debug metadata about key template and static assets."""
+
+    def capture_file_metadata(label: str, path: Path, *, now: datetime) -> Dict[str, object]:
+        try:
+            stat_result = path.stat()
+        except FileNotFoundError:
+            return {
+                "label": label,
+                "path": str(path),
+                "exists": False,
+            }
+
+        last_modified = datetime.fromtimestamp(stat_result.st_mtime, timezone.utc)
+        age_seconds = max(0, int((now - last_modified).total_seconds()))
+
+        return {
+            "label": label,
+            "path": str(path),
+            "exists": True,
+            "lastModified": last_modified.isoformat(),
+            "ageSeconds": age_seconds,
+        }
+
+    now = datetime.now(timezone.utc)
+    assets = {
+        key: capture_file_metadata(key, file_path, now=now)
+        for key, file_path in {
+            "templates/index.html": APP_DIR / "templates" / "index.html",
+            "static/css/style.css": APP_DIR / "static" / "css" / "style.css",
+            "static/js/main.js": APP_DIR / "static" / "js" / "main.js",
+        }.items()
+    }
+
+    return {
+        "serverTime": now.isoformat(),
+        "assets": assets,
+    }
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    context = {
+        "request": request,
+        "asset_debug": _build_asset_debug_payload(),
+    }
+    return templates.TemplateResponse("index.html", context)
 
 @app.post("/tasks/", response_model=schemas.TaskMutationResponse)
 def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)):
