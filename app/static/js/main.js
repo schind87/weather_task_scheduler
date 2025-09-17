@@ -309,10 +309,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             .map((detail) => `<li>${detail.reason} (${detail.count})</li>`)
                             .join('');
                         const introHtml = hiddenIntro ? `<p>${hiddenIntro}</p>` : '';
+                        const detailsBlock = `<div class="mt-1">${introHtml}<ul class="list-disc pl-5">${listItems}</ul></div>`;
                         windowsDiv.innerHTML = `<div>${visibleMessage}</div>` +
                             `<details class="mt-1 text-sm">` +
                             `<summary class="cursor-pointer text-blue-600">Show details</summary>` +
-                            `<div class="mt-1">${introHtml}<ul class="list-disc pl-5">${listItems}</ul></div>` +
+                            detailsBlock +
                             `</details>`;
                     } else {
                         windowsDiv.textContent = fallbackMessage;
