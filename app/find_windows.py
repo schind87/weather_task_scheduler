@@ -5,10 +5,15 @@ from typing import Dict, List, Optional, Tuple
 Block = Dict[str, float]
 
 
-def format_window(start_ts: int, end_ts: int) -> str:
-    """Return a friendly string for a window using local time."""
-    start_local = time.localtime(start_ts)
-    end_local = time.localtime(end_ts)
+def _to_timezone_struct(timestamp: int, timezone_offset: int) -> time.struct_time:
+    """Convert a UTC timestamp to the task's local time using the offset."""
+    return time.gmtime(timestamp + timezone_offset)
+
+
+def format_window(start_ts: int, end_ts: int, timezone_offset: int) -> str:
+    """Return a friendly string for a window using the task's local time."""
+    start_local = _to_timezone_struct(start_ts, timezone_offset)
+    end_local = _to_timezone_struct(end_ts, timezone_offset)
     start_month = str(start_local.tm_mon)
     start_day = str(start_local.tm_mday)
     start_hour = start_local.tm_hour % 12 or 12
@@ -39,6 +44,7 @@ def _check_constraints(
     earliest: Optional[Tuple[int, int]],
     latest: Optional[Tuple[int, int]],
     enforce_time: bool = True,
+    timezone_offset: int = 0,
 ) -> Tuple[bool, Optional[str]]:
     temp = entry.get('temp')
     rain = entry.get('rain', 0) or 0
@@ -62,7 +68,7 @@ def _check_constraints(
     if no_rain and rain > 0:
         return False, 'rain expected during window'
     if enforce_time and (earliest or latest):
-        dt_local = time.localtime(entry['dt'])
+        dt_local = _to_timezone_struct(entry['dt'], timezone_offset)
         current_hour = (dt_local.tm_hour, dt_local.tm_min)
         if earliest and current_hour < earliest:
             return False, f'start before earliest allowed ({dt_local.tm_hour:02d}:{dt_local.tm_min:02d})'
@@ -89,6 +95,7 @@ def find_windows(
     duration_hours: int,
     earliest_start: Optional[str] = None,
     latest_start: Optional[str] = None,
+    timezone_offset: int = 0,
 ) -> Dict[str, object]:
     """Given hourly forecast and task constraints, find viable time windows."""
     if not forecast:
@@ -129,6 +136,7 @@ def find_windows(
                 earliest if enforce_time else None,
                 latest if enforce_time else None,
                 enforce_time=enforce_time,
+                timezone_offset=timezone_offset,
             )
             if not block_valid:
                 if block_reason:
@@ -146,7 +154,7 @@ def find_windows(
             actual_hours = int((window_end - window_start) / 3600)
             valid_windows.append(
                 {
-                    'display': format_window(window_start, window_end),
+                    'display': format_window(window_start, window_end, timezone_offset),
                     'start_ts': window_start,
                     'duration': f"{actual_hours}h",
                 }
