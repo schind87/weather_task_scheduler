@@ -27,8 +27,7 @@ def get_tasks(db: Session):
 def create_task(db: Session, task: schemas.TaskCreate) -> schemas.TaskMutationResponse:
     # Fetch forecast and find scheduling window
     try:
-
-        forecast = weather.fetch_hourly_forecast(task.location)
+        forecast, timezone_offset = weather.fetch_hourly_forecast(task.location)
     except weather.WeatherServiceError as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
 
@@ -89,8 +88,7 @@ def update_task(
     for field, value in update_data.items():
         setattr(task, field, value)
     try:
-
-        forecast = weather.fetch_hourly_forecast(task.location)
+        forecast, timezone_offset = weather.fetch_hourly_forecast(task.location)
     except weather.WeatherServiceError as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
 

@@ -70,7 +70,7 @@ def get_suggestions(request: schemas.SuggestionRequest, db: Session = Depends(ge
         raise HTTPException(status_code=404, detail="Task not found")
 
     try:
-        forecast = weather.fetch_hourly_forecast(task.location)
+        forecast, timezone_offset = weather.fetch_hourly_forecast(task.location)
     except weather.WeatherServiceError as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
     except ValueError as e:

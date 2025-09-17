@@ -1,5 +1,6 @@
 
 import os
+from typing import Dict, List, Tuple
 
 
 import requests
@@ -48,7 +49,8 @@ def _normalize_zip(zip_code: str) -> str:
 def fetch_hourly_forecast(zip_code: str) -> Tuple[List[Dict[str, float]], int]:
     """Fetch the next five days of hourly weather for a ZIP code.
 
-    Returns a tuple of (hourly blocks, location timezone offset).
+    Returns a tuple of ``(hourly blocks, location timezone offset)`` where the
+    timezone offset is expressed in seconds from UTC.
     """
     normalized = _normalize_zip(zip_code)
     url = (
@@ -78,7 +80,7 @@ def fetch_hourly_forecast(zip_code: str) -> Tuple[List[Dict[str, float]], int]:
         raise WeatherServiceError(
             f"Weather API error: {message}", status_code=502
         )
-    results = []
+    results: List[Dict[str, float]] = []
     for entry in data["list"]:
         results.append(
             {
@@ -89,7 +91,14 @@ def fetch_hourly_forecast(zip_code: str) -> Tuple[List[Dict[str, float]], int]:
             }
         )
 
-    return results
+    timezone_offset = 0
+    city = data.get("city") if isinstance(data, dict) else None
+    if isinstance(city, dict):
+        offset = city.get("timezone")
+        if isinstance(offset, (int, float)):
+            timezone_offset = int(offset)
+
+    return results, timezone_offset
 
 
 def _parse_response_json(response: requests.Response):
