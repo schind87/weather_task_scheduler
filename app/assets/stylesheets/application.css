@@ -252,6 +252,7 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+
   background: #fff;
 }
 
@@ -872,6 +873,11 @@ input:focus-visible {
     grid-template-columns: 0.9fr 1.2fr;
     gap: 1.75rem;
     align-items: start;
+  }
+
+
+  .tablet-toggle {
+    display: none;
   }
 
   .form-grid {

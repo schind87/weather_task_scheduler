@@ -775,21 +775,24 @@
       }
     };
 
-    const closeModal = () => {
+
+    const closeModal = ({ restoreFocus = true } = {}) => {
+      if (state.trapHandler) {
+        elements.addPanel.removeEventListener("keydown", state.trapHandler);
+        state.trapHandler = null;
+      }
       if (state.layoutMode === "mobile") {
         elements.addPanel.classList.add("is-modal");
-        elements.addPanel.classList.remove("is-open");
-        if (state.trapHandler) {
-          elements.addPanel.removeEventListener("keydown", state.trapHandler);
-          state.trapHandler = null;
-        }
-        elements.modalOverlay.hidden = true;
-        document.body.style.overflow = "";
-        if (state.previousFocus && typeof state.previousFocus.focus === "function") {
-          state.previousFocus.focus();
-        }
-        state.modalOpen = false;
       }
+      elements.addPanel.classList.remove("is-open");
+      elements.modalOverlay.hidden = true;
+      document.body.style.overflow = "";
+      if (restoreFocus && state.previousFocus && typeof state.previousFocus.focus === "function") {
+        state.previousFocus.focus();
+      }
+      state.previousFocus = null;
+      state.modalOpen = false;
+
     };
 
     const setTabletCollapsed = (collapsed) => {
@@ -820,7 +823,9 @@
         if (main.firstElementChild !== elements.addPanel) {
           main.insertBefore(elements.addPanel, elements.taskListPanel);
         }
-        closeModal();
+
+        closeModal({ restoreFocus: false });
+
         elements.addPanel.classList.remove("is-modal", "is-open");
         elements.modalOverlay.hidden = true;
         setTabletCollapsed(false);
@@ -828,7 +833,9 @@
         if (main.firstElementChild === elements.addPanel) {
           main.insertBefore(elements.taskListPanel, elements.addPanel);
         }
-        closeModal();
+
+        closeModal({ restoreFocus: false });
+
         elements.addPanel.classList.remove("is-modal", "is-open");
         elements.modalOverlay.hidden = true;
         setTabletCollapsed(false);
@@ -837,7 +844,9 @@
           main.insertBefore(elements.taskListPanel, elements.addPanel);
         }
         elements.addPanel.classList.add("is-modal");
-        closeModal();
+
+        closeModal({ restoreFocus: false });
+
       }
     };
 
