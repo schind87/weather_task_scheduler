@@ -11,7 +11,7 @@ the same feature set:
 
 ## Requirements
 
-- Ruby 3.2+
+- Ruby+Devkit 3.4.5-1 (x64)
 - Bundler
 - SQLite (default development/test database)
 - An [OpenWeather](https://openweathermap.org/api) API key
@@ -35,8 +35,12 @@ export OPENWEATHER_API_KEY="your-openweather-api-key"
 bin/rails server
 ```
 
-The HTML landing page at `/` highlights the JSON endpoints. Interact with the API
-using a tool such as `curl`, `HTTPie`, or Postman.
+> **Windows note:** Puma's hot-restart hook is disabled on Windows because the
+> platform cannot re-execute the `bin/rails` stub. Restart the server manually
+> after code changes.
+
+The HTML landing page at `/` highlights the JSON endpoints. Interact with the
+API using a tool such as `curl`, `HTTPie`, or Postman.
 
 ## API overview
 

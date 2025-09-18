@@ -775,6 +775,7 @@
       }
     };
 
+
     const closeModal = ({ restoreFocus = true } = {}) => {
       if (state.trapHandler) {
         elements.addPanel.removeEventListener("keydown", state.trapHandler);
@@ -791,6 +792,7 @@
       }
       state.previousFocus = null;
       state.modalOpen = false;
+
     };
 
     const setTabletCollapsed = (collapsed) => {
@@ -821,7 +823,9 @@
         if (main.firstElementChild !== elements.addPanel) {
           main.insertBefore(elements.addPanel, elements.taskListPanel);
         }
+
         closeModal({ restoreFocus: false });
+
         elements.addPanel.classList.remove("is-modal", "is-open");
         elements.modalOverlay.hidden = true;
         setTabletCollapsed(false);
@@ -829,7 +833,9 @@
         if (main.firstElementChild === elements.addPanel) {
           main.insertBefore(elements.taskListPanel, elements.addPanel);
         }
+
         closeModal({ restoreFocus: false });
+
         elements.addPanel.classList.remove("is-modal", "is-open");
         elements.modalOverlay.hidden = true;
         setTabletCollapsed(false);
@@ -838,7 +844,9 @@
           main.insertBefore(elements.taskListPanel, elements.addPanel);
         }
         elements.addPanel.classList.add("is-modal");
+
         closeModal({ restoreFocus: false });
+
       }
     };
 

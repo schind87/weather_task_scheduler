@@ -252,6 +252,7 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+
   background: #fff;
 }
 
@@ -873,6 +874,7 @@ input:focus-visible {
     gap: 1.75rem;
     align-items: start;
   }
+
 
   .tablet-toggle {
     display: none;
