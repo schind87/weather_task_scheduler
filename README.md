@@ -11,7 +11,7 @@ the same feature set:
 
 ## Requirements
 
-- Ruby 3.2+
+- Ruby+Devkit 3.4.5-1 (x64)
 - Bundler
 - SQLite (default development/test database)
 - An [OpenWeather](https://openweathermap.org/api) API key
