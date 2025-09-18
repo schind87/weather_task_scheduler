@@ -1,32 +1,220 @@
-<div class="hero">
-  <h1>Weather-Aware Task Scheduler</h1>
-  <p class="lead">
-    Use the JSON API endpoints to create tasks that respect temperature, humidity, and rainfall constraints.
-  </p>
+<div class="app-shell" data-app-shell>
+  <header class="app-header">
+    <div class="app-brand">
+      <div class="app-mark" aria-hidden="true">☀️</div>
+      <div>
+        <p class="app-supertitle">Weather Task Scheduler</p>
+        <h1 class="app-title">Plan every task around the perfect forecast</h1>
+      </div>
+    </div>
+    <button type="button" class="icon-button" id="settingsButton" aria-label="Settings">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M10.325 4.317a1 1 0 0 1 1.35-.447l.1.058 1.2.8a1 1 0 0 0 .567.154h1.4a1 1 0 0 1 .993.883L16 5.9v1.2a1 1 0 0 0 .154.567l.8 1.2a1 1 0 0 1 .058 1.094l-.058.1-1 1.5a1 1 0 0 0-.154.567v1.4a1 1 0 0 1-.883.993L14.7 14.6h-1.2a1 1 0 0 0-.567.154l-1.2.8a1 1 0 0 1-1.094.058l-.1-.058-1.5-1a1 1 0 0 0-.567-.154H7.2a1 1 0 0 1-.993-.883L6.2 13.4v-1.2a1 1 0 0 0-.154-.567l-.8-1.2a1 1 0 0 1-.058-1.094l.058-.1 1-1.5a1 1 0 0 0 .154-.567V6.2a1 1 0 0 1 .883-.993L7.3 5.2h1.2a1 1 0 0 0 .567-.154l1.2-.8ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" />
+      </svg>
+    </button>
+  </header>
+
+  <main class="app-main" id="appMain" data-app-main>
+    <section class="task-list-panel" id="taskListPanel" aria-labelledby="taskListHeading">
+      <div class="panel-header">
+        <div>
+          <p class="panel-kicker">Scheduled Tasks</p>
+          <h2 class="panel-title" id="taskListHeading">Task List</h2>
+        </div>
+        <button type="button" class="text-button" id="refreshAllButton" data-action="refresh-all">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M4 4v5h.008l.002.116A1 1 0 0 0 5 10h5a1 1 0 0 0 0-2H7.618a5 5 0 1 1-.633 4.33 1 1 0 1 0-1.952.444A7 7 0 1 0 12 5H9a1 1 0 0 0-.993.883L8 6v.117L7.993 7H9a1 1 0 0 0 0-2Z" />
+          </svg>
+          Refresh all windows
+        </button>
+      </div>
+      <p class="panel-subtitle">Review upcoming tasks, conflicts, and alternative windows at a glance.</p>
+      <div class="task-list-empty" id="taskListEmpty" role="status" hidden>
+        <p>No tasks yet. Add your first task to see weather-aware windows.</p>
+      </div>
+      <div class="task-list" id="taskList" data-task-list></div>
+    </section>
+
+    <aside class="add-task-panel" id="addTaskPanel" aria-labelledby="addTaskHeading">
+      <div class="panel-header add-task-header">
+        <div>
+          <p class="panel-kicker">Add a Task</p>
+          <h2 class="panel-title" id="addTaskHeading">Add Task</h2>
+        </div>
+        <div class="panel-header-actions">
+          <button type="button" class="text-button tablet-toggle" id="tabletToggleButton" aria-expanded="true" aria-controls="addTaskForm">
+            <span class="tablet-toggle-label">Collapse</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M7.757 8.343a1 1 0 0 1 1.32-.083l.094.083L12 11.172l2.829-2.829a1 1 0 0 1 1.497 1.32l-.083.094-3.536 3.536a1 1 0 0 1-1.32.083l-.094-.083-3.536-3.536a1 1 0 0 1 0-1.414Z" />
+            </svg>
+          </button>
+          <button type="button" class="icon-button modal-close" id="modalCloseButton" aria-label="Close add task panel">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M6.225 4.811a1 1 0 0 1 1.32-.083l.094.083L12 9.172l4.36-4.36a1 1 0 0 1 1.497 1.32l-.083.094L13.828 10.5l4.36 4.36a1 1 0 0 1-.083 1.497l-.094.083a1 1 0 0 1-1.32.083l-.094-.083L12 12.828l-4.36 4.36a1 1 0 0 1-1.497-1.32l.083-.094L10.172 10.5l-4.36-4.36a1 1 0 0 1 0-1.414Z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <p class="panel-subtitle">Group essentials, set windows, and fine-tune weather preferences.</p>
+      <form id="addTaskForm" class="add-task-form" novalidate>
+        <section class="form-section" aria-labelledby="sectionBasicsHeading">
+          <header class="form-section-header">
+            <div>
+              <p class="form-section-kicker">Section A</p>
+              <h3 id="sectionBasicsHeading">Basics</h3>
+            </div>
+          </header>
+          <div class="form-grid">
+            <div class="form-control" data-field="name">
+              <label for="taskName">Task Name<span aria-hidden="true">*</span></label>
+              <input id="taskName" name="name" type="text" autocomplete="off" required minlength="2" maxlength="80" placeholder="e.g., Paint the deck" aria-describedby="nameHint nameError">
+              <p class="field-hint" id="nameHint">Provide a descriptive name between 2 and 80 characters.</p>
+              <p class="field-error" id="nameError" role="alert"></p>
+            </div>
+            <div class="form-control" data-field="duration">
+              <label for="taskDuration">Duration (hours)<span aria-hidden="true">*</span></label>
+              <div class="input-with-buttons">
+                <button type="button" class="stepper" data-step="-0.25" aria-label="Decrease duration">−</button>
+                <input id="taskDuration" name="duration" type="number" min="0.25" max="24" step="0.25" value="1" required aria-describedby="durationError">
+                <button type="button" class="stepper" data-step="0.25" aria-label="Increase duration">+</button>
+              </div>
+              <p class="field-error" id="durationError" role="alert"></p>
+            </div>
+            <div class="form-control" data-field="zip">
+              <label for="taskZip">Location ZIP<span aria-hidden="true">*</span></label>
+              <input id="taskZip" name="zip" type="text" inputmode="numeric" pattern="\d{5}" maxlength="5" placeholder="e.g., 98101" aria-describedby="zipHint zipError">
+              <p class="field-hint" id="zipHint">We’ll use the ZIP to look up precise hourly forecasts.</p>
+              <p class="field-error" id="zipError" role="alert"></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="form-section" aria-labelledby="sectionTimeHeading">
+          <header class="form-section-header">
+            <div>
+              <p class="form-section-kicker">Section B</p>
+              <h3 id="sectionTimeHeading">Time Window</h3>
+            </div>
+          </header>
+          <div class="form-grid">
+            <div class="form-control" data-field="earliest">
+              <label for="taskEarliest">Earliest Start <span class="muted">(daily)</span></label>
+              <input id="taskEarliest" name="earliest" type="time" aria-describedby="earliestHint timeError">
+              <p class="field-hint" id="earliestHint">Earliest Start (daily)</p>
+            </div>
+            <div class="form-control" data-field="latest">
+              <label for="taskLatest">Latest Start <span class="muted">(daily)</span></label>
+              <input id="taskLatest" name="latest" type="time" aria-describedby="latestHint timeError">
+              <p class="field-hint" id="latestHint">Latest Start (daily)</p>
+            </div>
+          </div>
+          <p class="field-error" id="timeError" role="alert"></p>
+        </section>
+
+        <section class="form-section advanced" aria-labelledby="sectionAdvancedHeading">
+          <header class="form-section-header advanced-header">
+            <div>
+              <p class="form-section-kicker">Section C</p>
+              <h3 id="sectionAdvancedHeading">Advanced Filters</h3>
+            </div>
+            <button type="button" class="text-button" id="advancedToggle" aria-expanded="false" aria-controls="advancedContent">
+              <span class="advanced-toggle-label">Show advanced</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 14.5a1 1 0 0 1-.707-.293l-4-4a1 1 0 0 1 1.414-1.414L12 12.086l3.293-3.293a1 1 0 0 1 1.414 1.414l-4 4A1 1 0 0 1 12 14.5Z" />
+              </svg>
+            </button>
+          </header>
+          <div class="advanced-content" id="advancedContent" hidden>
+            <div class="preset-chips" role="group" aria-label="Presets">
+              <button type="button" class="chip" data-preset="warm">Warm Day</button>
+              <button type="button" class="chip" data-preset="cool">Cool Day</button>
+              <button type="button" class="chip" data-preset="dry">Dry Only</button>
+            </div>
+
+            <div class="form-control toggle-row">
+              <div class="toggle-header">
+                <div>
+                  <span class="toggle-title">Require Rain-free</span>
+                  <p class="field-hint">Only schedule when no precipitation is forecast.</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="taskNoRain" name="no_rain">
+                  <span class="switch-slider" aria-hidden="true"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-control range-group" data-field="temperature">
+              <div class="range-header">
+                <div>
+                  <span class="toggle-title">Temperature Range</span>
+                  <p class="field-hint">Set preferred temperatures in °F.</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="temperatureToggle" name="temperature_enabled">
+                  <span class="switch-slider" aria-hidden="true"></span>
+                </label>
+              </div>
+              <div class="range-inputs" data-range="temperature" aria-describedby="temperatureError">
+                <div class="range-row">
+                  <label for="tempMin" class="sr-only">Minimum temperature</label>
+                  <input id="tempMin" name="temp_min" type="number" inputmode="numeric" step="1" min="-20" max="120" disabled>
+                  <span class="unit">°F</span>
+                  <label for="tempMax" class="sr-only">Maximum temperature</label>
+                  <input id="tempMax" name="temp_max" type="number" inputmode="numeric" step="1" min="-20" max="120" disabled>
+                  <span class="unit">°F</span>
+                </div>
+                <div class="slider-row">
+                  <input type="range" id="tempMinSlider" min="-20" max="120" step="1" value="60" disabled>
+                  <input type="range" id="tempMaxSlider" min="-20" max="120" step="1" value="80" disabled>
+                </div>
+              </div>
+              <p class="field-error" id="temperatureError" role="alert"></p>
+            </div>
+
+            <div class="form-control range-group" data-field="humidity">
+              <div class="range-header">
+                <div>
+                  <span class="toggle-title">Humidity Range</span>
+                  <p class="field-hint">Humidity: 0% dry, 100% very humid.</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="humidityToggle" name="humidity_enabled">
+                  <span class="switch-slider" aria-hidden="true"></span>
+                </label>
+              </div>
+              <div class="range-inputs" data-range="humidity" aria-describedby="humidityError">
+                <div class="range-row">
+                  <label for="humidityMin" class="sr-only">Minimum humidity</label>
+                  <input id="humidityMin" name="humidity_min" type="number" inputmode="numeric" step="1" min="0" max="100" disabled>
+                  <span class="unit">%</span>
+                  <label for="humidityMax" class="sr-only">Maximum humidity</label>
+                  <input id="humidityMax" name="humidity_max" type="number" inputmode="numeric" step="1" min="0" max="100" disabled>
+                  <span class="unit">%</span>
+                </div>
+                <div class="slider-row">
+                  <input type="range" id="humidityMinSlider" min="0" max="100" step="1" value="20" disabled>
+                  <input type="range" id="humidityMaxSlider" min="0" max="100" step="1" value="70" disabled>
+                </div>
+              </div>
+              <p class="field-error" id="humidityError" role="alert"></p>
+            </div>
+          </div>
+        </section>
+
+        <div class="form-actions">
+          <button type="submit" class="primary-button" id="submitTaskButton">Save Task</button>
+          <button type="button" class="text-button" id="cancelEditButton">Cancel edit</button>
+        </div>
+      </form>
+    </aside>
+  </main>
+
+  <button type="button" class="floating-add-button" id="floatingAddButton" aria-haspopup="dialog">
+    <span aria-hidden="true">＋</span>
+    <span class="sr-only">Add Task</span>
+  </button>
 </div>
 
-<section>
-  <h2>Available Endpoints</h2>
-  <ul>
-    <li><code>GET /tasks</code> – List all scheduled tasks.</li>
-    <li><code>POST /tasks</code> – Create a task and receive scheduling suggestions.</li>
-    <li><code>GET /tasks/:id</code> – Retrieve a single task.</li>
-    <li><code>PUT /tasks/:id</code> – Update a task and recompute weather windows.</li>
-    <li><code>DELETE /tasks/:id</code> – Remove a task.</li>
-    <li><code>POST /suggestions</code> – Request updated windows for an existing task.</li>
-  </ul>
-</section>
-
-<section>
-  <h2>Environment Setup</h2>
-  <p>
-    Set the <code>OPENWEATHER_API_KEY</code> environment variable before starting the server or running tests.
-  </p>
-  <pre><code>export OPENWEATHER_API_KEY="your-openweather-api-key"
-bin/rails server</code></pre>
-</section>
-
-<section>
-  <h2>Data Overview</h2>
-  <p>There are currently <strong><%= @tasks_count %></strong> task(s) stored.</p>
-</section>
+<div class="modal-overlay" id="modalOverlay" hidden></div>
+<div class="toast-region" id="toastRegion" role="status" aria-live="polite"></div>
