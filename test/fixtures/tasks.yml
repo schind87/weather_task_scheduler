@@ -1,0 +1,25 @@
+one:
+  name: Sample Task
+  duration_hours: 3
+  min_temp:
+  max_temp:
+  min_humidity:
+  max_humidity:
+  no_rain: true
+  location: 97201
+  scheduled_time:
+  earliest_start: "08:00"
+  latest_start: "18:00"
+
+two:
+  name: Backup Task
+  duration_hours: 2
+  min_temp:
+  max_temp:
+  min_humidity:
+  max_humidity:
+  no_rain: true
+  location: 94107
+  scheduled_time:
+  earliest_start:
+  latest_start:

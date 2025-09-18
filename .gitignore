@@ -1,14 +1,36 @@
-# SQLite database
-/test.db
+# Bundler and Ruby
+/.bundle
+/vendor/bundle
+*.gem
+*.rbc
+.byebug_history
 
-# Python caches
+# Rails defaults
+/log/*
+/tmp/*
+!/log/.keep
+!/tmp/.keep
+/storage/*
+!/storage/.keep
+/public/assets
+/node_modules
+/yarn-error.log
+coverage/
+/db/*.sqlite3
+/db/*.sqlite3-journal
+/config/master.key
+
+# Environment files
+.env
+.env.*
+
+# Python legacy artifacts
+/test.db
 __pycache__/
 *.py[cod]
-
-# Virtual environment directories
 .venv/
 ENV/
 venv/
 
-# VSCode settings
+# Editor settings
 .vscode/

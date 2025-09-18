@@ -1,0 +1,32 @@
+<div class="hero">
+  <h1>Weather-Aware Task Scheduler</h1>
+  <p class="lead">
+    Use the JSON API endpoints to create tasks that respect temperature, humidity, and rainfall constraints.
+  </p>
+</div>
+
+<section>
+  <h2>Available Endpoints</h2>
+  <ul>
+    <li><code>GET /tasks</code> – List all scheduled tasks.</li>
+    <li><code>POST /tasks</code> – Create a task and receive scheduling suggestions.</li>
+    <li><code>GET /tasks/:id</code> – Retrieve a single task.</li>
+    <li><code>PUT /tasks/:id</code> – Update a task and recompute weather windows.</li>
+    <li><code>DELETE /tasks/:id</code> – Remove a task.</li>
+    <li><code>POST /suggestions</code> – Request updated windows for an existing task.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Environment Setup</h2>
+  <p>
+    Set the <code>OPENWEATHER_API_KEY</code> environment variable before starting the server or running tests.
+  </p>
+  <pre><code>export OPENWEATHER_API_KEY="your-openweather-api-key"
+bin/rails server</code></pre>
+</section>
+
+<section>
+  <h2>Data Overview</h2>
+  <p>There are currently <strong><%= @tasks_count %></strong> task(s) stored.</p>
+</section>
